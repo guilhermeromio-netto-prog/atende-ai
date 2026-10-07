@@ -48,6 +48,18 @@
             <tr><td>🟢 WhatsApp</td><td><span class="chip chip--atencao">Em breve</span></td><td>Segundo adaptador do mesmo motor, via WhatsApp Cloud API (Meta), com conta comercial verificada e modelos de mensagem aprovados.</td></tr>
           </tbody></table></div>
         </section>
+        <section class="card" aria-labelledby="h-cx">
+          <h2 id="h-cx">Modo conectado (bot de teste no Telegram)</h2>
+          <p class="pequeno muted">Liga Pedidos e Dashboard aos dados reais do bot <a href="https://t.me/Applojas10_bot">@Applojas10_bot</a>. O jeito mais fácil: no Telegram, como dono, envie <code>/conectar</code> e abra o link que o bot mandar. A chave só lê os pedidos do seu negócio. Sem conexão, o app usa os dados de exemplo.</p>
+          <div id="cx-status" style="margin-bottom:10px">${S().vivo ? '<span class="chip chip--ok">Conectado: ' + U.esc(S().vivo.negocio.nome) + ' · ' + S().vivo.pedidos.length + ' pedido(s)</span>' : S().conexao() ? '<span class="chip chip--atencao">Sem resposta da API' + (S().vivoErro ? ': ' + U.esc(S().vivoErro) : '') + '</span>' : '<span class="chip">Desconectado · usando dados de exemplo</span>'}</div>
+          <form id="cx-form" class="filtros" style="margin:0">
+            <label class="campo" style="flex:2;min-width:240px">Endereço da API<input class="inp" id="cx-api" type="url" placeholder="https://….trycloudflare.com" value="${U.esc((S().conexao() || {}).api || '')}" required></label>
+            <label class="campo">Negócio (id)<input class="inp" id="cx-neg" placeholder="oficina-pista-livre" value="${U.esc((S().conexao() || {}).negocio || '')}" required></label>
+            <label class="campo">Chave de leitura<input class="inp" id="cx-chave" type="password" autocomplete="off" value="${U.esc((S().conexao() || {}).chave || '')}" required></label>
+            <button class="btn btn--pri" type="submit">Conectar</button>
+            ${S().conexao() ? '<button class="btn" type="button" id="cx-sair">Desconectar</button>' : ''}
+          </form>
+        </section>
         <section class="card" aria-labelledby="h-dados">
           <h2 id="h-dados">Dados da demonstração</h2>
           <p class="pequeno muted">Tudo fica salvo só neste navegador (localStorage). Os ${S().dados.ticketsExemplo.length} pedidos iniciais são dados de exemplo fictícios.</p>
@@ -67,6 +79,15 @@
     main.querySelectorAll('[data-p]').forEach((i) => i.addEventListener('change', () => {
       sla[i.dataset.p][i.dataset.k] = Math.max(1, +i.value || 1); S().salvar(); U.toast('SLA atualizado');
     }));
+    main.querySelector('#cx-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const cx = { api: main.querySelector('#cx-api').value.trim().replace(/\/+$/, ''), negocio: main.querySelector('#cx-neg').value.trim(), chave: main.querySelector('#cx-chave').value.trim() };
+      const ok = await S().conectar(cx);
+      U.toast(ok ? 'Conectado ao bot: ' + S().vivo.negocio.nome : 'Não conectou: ' + S().vivoErro);
+      render(main);
+    });
+    const sair = main.querySelector('#cx-sair');
+    if (sair) sair.addEventListener('click', () => { S().desconectar(); U.toast('Desconectado. Voltando aos dados de exemplo.'); render(main); });
     main.querySelector('#cf-exp').addEventListener('click', () => { U.baixar('atende-ai-dados.json', JSON.stringify(S().st, null, 1), 'application/json'); U.toast('JSON exportado'); });
     const rot = main.querySelector('#cf-imp-rot');
     rot.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); main.querySelector('#cf-imp').click(); } });

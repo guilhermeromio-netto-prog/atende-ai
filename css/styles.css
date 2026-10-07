@@ -83,6 +83,14 @@ td .inp{min-height:36px;padding:6px 8px}
 .rodape{border-top:1px solid var(--borda);padding:18px 20px;text-align:center;color:var(--texto-2);font-size:.85rem}
 .rodape p{margin:.3em 0}
 
+.vivo{border:1px solid #1f5a3a;background:var(--ok-bg);color:#C9F7D9;border-radius:var(--raio);padding:10px 14px;margin-bottom:16px;font-size:.92rem}
+.vivo a{color:#E8FFF0}
+.vivo--erro{border-color:#5a4613;background:var(--atencao-bg);color:#FDE68A}
+.vivo--erro a{color:#FFF3C4}
+.guia ol{padding-left:22px}
+.guia li{margin-bottom:8px}
+.guia .card{margin-bottom:16px}
+
 /* landing */
 .hero{display:grid;grid-template-columns:1.1fr .9fr;gap:32px;align-items:center;padding:20px 0 36px}
 .hero p.lead{font-size:1.15rem;color:var(--texto-2);max-width:56ch}

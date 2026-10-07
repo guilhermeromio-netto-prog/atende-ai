@@ -23,7 +23,7 @@
   function cartao(t) {
     const s = M.slaEstado(t);
     return '<li><button type="button" class="tk' + (t._novo ? ' tk--novo' : '') + '" data-id="' + U.esc(t.id) + '" aria-label="Pedido ' + U.esc(t.id) + ', ' + U.esc(t.cliente) + ', ' + U.esc(t.status) + ', ' + U.esc(s.texto) + '">' +
-      '<span class="tk__top"><span>' + U.esc(t.id) + (t.exemplo ? ' · exemplo' : ' · novo') + '</span><span>' + U.dataCurta(t.criado) + ' ' + U.hora(t.criado) + '</span></span>' +
+      '<span class="tk__top"><span>' + U.esc(t.id) + (t.vivo ? ' · ao vivo' : t.exemplo ? ' · exemplo' : ' · novo') + '</span><span>' + U.dataCurta(t.criado) + ' ' + U.hora(t.criado) + '</span></span>' +
       '<span class="tk__nome">' + U.esc(t.cliente) + (t.humano ? ' 🙋' : '') + '</span>' +
       '<span class="tk__serv">' + U.esc(servicos(t)) + (t.veiculo ? ' · ' + U.esc(t.veiculo) : '') + '</span>' +
       '<span class="tk__rod">' + slaChip(t) + '<strong class="pequeno">' + (t.total && t.total.max ? U.brl(t.valorFinal || M.valorMedio(t)) : '—') + '</strong></span></button></li>';
@@ -63,16 +63,16 @@
     const def = S().segDef(t.seg); const rot = def.rotulos; const ordem = S().dados.status; const i = ordem.indexOf(t.status);
     const prox = M.proximoStatus(t);
     const pos = t.eventos.find((e) => e.regra === 'posvenda' && e.estado === 'agendado');
-    const acao = prox ? '▶ Simular avanço para "' + prox + '"' : pos ? '▶ Simular envio do pós-venda agora' : null;
+    const acao = t.vivo ? null : prox ? '▶ Simular avanço para "' + prox + '"' : pos ? '▶ Simular envio do pós-venda agora' : null;
     const canal = AT.Canais.get(t.canal);
     const dd = (k, v) => (v ? '<dt>' + k + '</dt><dd>' + U.esc(v) + '</dd>' : '');
     return `
       <div class="gaveta__cab"><div><h2 id="gv-titulo">Pedido ${U.esc(t.id)}</h2>
-        <div class="linha">${t.exemplo ? '<span class="chip chip--exemplo">dados de exemplo</span>' : '<span class="chip chip--azul">criado nesta demonstração</span>'}${prioChip(t.prioridade)}${slaChip(t)}</div></div>
+        <div class="linha">${t.vivo ? '<span class="chip chip--ok">ao vivo · Telegram</span>' : t.exemplo ? '<span class="chip chip--exemplo">dados de exemplo</span>' : '<span class="chip chip--azul">criado nesta demonstração</span>'}${prioChip(t.prioridade)}${slaChip(t)}</div></div>
         <button type="button" class="btn btn--p fechar" aria-label="Fechar detalhes">✕</button></div>
       <div class="gaveta__corpo">
         <section><h3>Etapa</h3><div class="pipeline">${ordem.map((s, k) => '<span class="' + (k < i ? 'feito' : k === i ? 'atual' : '') + '">' + s + '</span>').join('')}</div>
-          <div class="linha" style="margin-top:10px">${acao ? '<button type="button" class="btn btn--pri" id="gv-avancar">' + acao + '</button>' : '<span class="muted pequeno">Ciclo completo: entregue e pós-venda enviado.</span>'}</div>
+          <div class="linha" style="margin-top:10px">${acao ? '<button type="button" class="btn btn--pri" id="gv-avancar">' + acao + '</button>' : '<span class="muted pequeno">' + (t.vivo ? 'Pedido real do bot (somente leitura): avance pelos botões do dono no Telegram.' : 'Ciclo completo: entregue e pós-venda enviado.') + '</span>'}</div>
           <p class="pequeno muted" style="margin:6px 0 0">Cada avanço dispara as automações ativas daquela etapa, como faria o servidor da fase 2.</p></section>
         <section class="ficha"><h3>Cliente</h3><dl>
           ${dd('Nome', t.cliente)}${dd('Canal', canal.nome)}${dd('Telefone', t.telefone)}${dd('Veículo', t.veiculo)}${dd('Placa', t.placa)}${dd('Entrega', t.bairro)}
@@ -145,6 +145,7 @@
       <div class="cab"><div><div class="olho">Passo 3 · Operação</div><h1>Pedidos e SLA</h1>
         <p>Todo atendimento vira um pedido com prazo. Os cartões mudam de cor quando o SLA entra em atenção (menos de 25% do prazo) ou estoura. Abra um pedido para ver a conversa e simular as próximas etapas.</p></div>
         <div class="linha"><span class="muted pequeno" id="pd-total"></span><a class="btn btn--tg btn--p" href="#/atendimento">+ Novo atendimento</a></div></div>
+      ${U.faixaVivo()}
       <div class="filtros">
         <label class="campo">Buscar<input class="inp" id="pd-busca" type="search" placeholder="Nome, pedido, placa…" value="${U.esc(filtro.busca)}"></label>
         <label class="campo">Prioridade<select class="inp" id="pd-prio"><option value="">Todas</option>${Object.entries(S().dados.prioridades).map(([k, v]) => '<option value="' + k + '"' + (filtro.prio === k ? ' selected' : '') + '>' + v + '</option>').join('')}</select></label>
@@ -164,7 +165,12 @@
     desenharQuadro();
     if (param) { const t = S().ticket(decodeURIComponent(param)); if (t) abrir(t.id); }
   }
+  let assinatura = '';
   function tick() {
+    if (mainRef && document.body.contains(mainRef.querySelector('#pd-area')) && AT.S.vivoAtivo()) {
+      const a = JSON.stringify(AT.S.vivo.pedidos.map((t) => t.id + t.status + (t.chat || []).length));
+      if (a !== assinatura) { assinatura = a; const f = document.activeElement; desenharQuadro(); if (f && f.id && document.getElementById(f.id)) document.getElementById(f.id).focus(); }
+    }
     document.querySelectorAll('[data-sla]').forEach((el) => {
       const t = S().ticket(el.dataset.sla); if (!t) return; const s = M.slaEstado(t);
       el.className = 'chip chip--' + s.cls; el.textContent = '⏱️ ' + s.texto;

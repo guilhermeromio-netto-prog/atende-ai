@@ -85,7 +85,7 @@
     main.querySelector('#db-risco').innerHTML = risco.length ? '<div class="tabela-wrap"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Status</th><th>SLA</th></tr></thead><tbody>' +
       risco.map((t) => { const s = M.slaEstado(t); return '<tr><td><a href="#/pedidos/' + encodeURIComponent(t.id) + '">' + U.esc(t.id) + '</a></td><td>' + U.esc(t.cliente) + '</td><td>' + U.esc(t.status) + '</td><td><span class="chip chip--' + s.cls + '">' + U.esc(s.texto) + '</span></td></tr>'; }).join('') + '</tbody></table></div>'
       : '<p class="muted pequeno">Nenhum pedido em risco no filtro. 👏</p>';
-    main.querySelector('#db-legenda').textContent = l.length + ' pedido(s) no filtro · ' + l.filter((t) => t.exemplo).length + ' de exemplo';
+    main.querySelector('#db-legenda').textContent = l.length + ' pedido(s) no filtro · ' + (S().vivoAtivo() ? 'dados ao vivo do bot de teste' : l.filter((t) => t.exemplo).length + ' de exemplo');
   }
 
   function csv() {
@@ -102,6 +102,7 @@
     main.innerHTML = `
       <div class="cab"><div><div class="olho">Passo 4 · Gestão</div><h1>Dashboard de ${S().seg() === 'oficina' ? 'atendimento da oficina' : 'atendimento da loja'}</h1><p id="db-legenda"></p></div>
         <button type="button" class="btn" id="db-csv">⬇️ Exportar CSV</button></div>
+      ${U.faixaVivo()}
       <div class="filtros">
         <label class="campo">Período<select class="inp" id="db-periodo">${[['7', 'Últimos 7 dias'], ['30', 'Últimos 30 dias'], ['90', 'Últimos 90 dias'], ['todos', 'Tudo']].map(([v, r]) => '<option value="' + v + '"' + (f.periodo === v ? ' selected' : '') + '>' + r + '</option>').join('')}</select></label>
         <label class="campo">Status<select class="inp" id="db-status"><option value="">Todos</option>${S().dados.status.map((s) => '<option' + (f.status === s ? ' selected' : '') + '>' + s + '</option>').join('')}</select></label>

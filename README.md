@@ -32,7 +32,13 @@ js/canais/whatsapp.js   adaptador WhatsApp (em breve)
 js/inicio.js, onboarding.js, atendimento.js, pedidos.js, dashboard.js, config.js, app.js
 dados.json              catálogos, intenções, perguntas, automações, SLA, pedidos de exemplo
 docs/arquitetura.md     proposta da fase 2 (Telegram Bot API + Grok, depois WhatsApp)
+bot/                    bot REAL de teste no Telegram (Python, só biblioteca padrão) + API de leitura
+COMO-USAR.md            guia para donos e clientes finais
 ```
+
+## Bot de teste no Telegram
+
+Além da demonstração, há um bot real de teste: **[@Applojas10_bot](https://t.me/Applojas10_bot)** (pasta `bot/`, Python sem dependências, long polling, mesmo `dados.json`). Veja [COMO-USAR.md](COMO-USAR.md). Ele roda num computador de teste: se esse computador desligar, o bot para.
 
 ## Rodar localmente
 

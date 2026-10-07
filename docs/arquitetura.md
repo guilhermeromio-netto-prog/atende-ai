@@ -2,6 +2,11 @@
 
 > **Status:** proposta, ainda não construída. A demonstração publicada (fase 1) é 100% estática: a "IA" é simulada por regras e palavras-chave em `dados.json` e não há conexão com o Telegram, o WhatsApp ou modelos de IA.
 
+## 0. Onde estamos hoje
+
+- **Fase 1 (publicada):** demonstração estática no GitHub Pages, IA simulada por regras.
+- **Fase 1.5 (teste):** bot real [@Applojas10_bot](https://t.me/Applojas10_bot) em `bot/`, Python sem dependências, *long polling* (sem URL pública), mesmo `dados.json` e as mesmas regras portadas para `bot/motor.py`. Uma API somente leitura (`/api/export`, `/api/pedidos`, `/api/kpis`, `/api/catalogo`, com chave por negócio) é exposta por túnel rápido do Cloudflare e alimenta o "Modo conectado" do painel. Roda num computador de teste: não é produção.
+
 ## 1. Objetivo
 
 Transformar a demonstração num produto multiempresa (SaaS) em que oficinas e lojas tenham:

@@ -2,7 +2,7 @@
 (function (AT) {
   'use strict';
   const U = AT.U;
-  const ROTAS = { '': 'inicio', onboarding: 'onboarding', atendimento: 'atendimento', pedidos: 'pedidos', dashboard: 'dashboard', config: 'config' };
+  const ROTAS = { '': 'inicio', 'como-usar': 'comoUsar', onboarding: 'onboarding', atendimento: 'atendimento', pedidos: 'pedidos', dashboard: 'dashboard', config: 'config' };
   const main = document.getElementById('conteudo');
   let atual = null;
 
@@ -38,10 +38,15 @@
       main.innerHTML = '<div class="card" role="alert"><h1>Não foi possível carregar a demonstração</h1><p>O arquivo <code>dados.json</code> não abriu. Se você abriu o <code>index.html</code> direto do disco, rode um servidor local (ex.: <code>python3 -m http.server</code>) ou use o link do GitHub Pages.</p></div>';
       return;
     }
+    if (AT.S.conexao()) await AT.S.atualizarVivo();
     ligarSeg(document);
     window.addEventListener('hashchange', rota);
     rota();
-    setInterval(() => { const v = AT.V[ROTAS[atual]]; if (v && v._tick) v._tick(); }, 30000);
+    if (AT.S.vivoErro) U.toast('Modo conectado: ' + AT.S.vivoErro + '. Mostrando dados de exemplo.');
+    setInterval(async () => {
+      if (AT.S.conexao()) await AT.S.atualizarVivo();
+      const v = AT.V[ROTAS[atual]]; if (v && v._tick) v._tick();
+    }, 30000);
   }
   iniciar();
 })(window.AT);
