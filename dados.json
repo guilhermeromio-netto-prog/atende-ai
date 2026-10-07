@@ -1,0 +1,1292 @@
+{
+ "versao": 1,
+ "aviso": "Dados de exemplo fictícios para demonstração. Nomes, telefones e placas não pertencem a pessoas reais.",
+ "status": [
+  "Novo",
+  "Orçado",
+  "Aprovado",
+  "Em serviço",
+  "Pronto",
+  "Entregue"
+ ],
+ "prioridades": {
+  "alta": "Alta",
+  "media": "Média",
+  "baixa": "Baixa"
+ },
+ "segmentos": {
+  "oficina": {
+   "id": "oficina",
+   "rotulo": "Oficina",
+   "negocio": {
+    "nome": "Oficina Pista Livre",
+    "cidade": "São Paulo – SP",
+    "horario": [
+     null,
+     [
+      "08:00",
+      "18:00"
+     ],
+     [
+      "08:00",
+      "18:00"
+     ],
+     [
+      "08:00",
+      "18:00"
+     ],
+     [
+      "08:00",
+      "18:00"
+     ],
+     [
+      "08:00",
+      "18:00"
+     ],
+     [
+      "08:00",
+      "12:00"
+     ]
+    ]
+   },
+   "rotulos": {
+    "pecas": "Peças",
+    "mao": "Mão de obra",
+    "objeto": "carro",
+    "pronto": "Carro pronto"
+   },
+   "catalogo": [
+    {
+     "id": "oleo",
+     "nome": "Troca de óleo e filtro",
+     "categoria": "Manutenção",
+     "pecasMin": 140,
+     "pecasMax": 220,
+     "maoMin": 40,
+     "maoMax": 60,
+     "duracao": 45,
+     "palavras": [
+      "oleo",
+      "filtro",
+      "troca de oleo",
+      "lubrificante"
+     ]
+    },
+    {
+     "id": "pastilha",
+     "nome": "Troca de pastilhas de freio (dianteiras)",
+     "categoria": "Freios",
+     "pecasMin": 160,
+     "pecasMax": 320,
+     "maoMin": 90,
+     "maoMax": 140,
+     "duracao": 90,
+     "palavras": [
+      "pastilha",
+      "freio",
+      "frear"
+     ]
+    },
+    {
+     "id": "disco",
+     "nome": "Troca de discos de freio (par)",
+     "categoria": "Freios",
+     "pecasMin": 300,
+     "pecasMax": 600,
+     "maoMin": 120,
+     "maoMax": 180,
+     "duracao": 120,
+     "palavras": [
+      "disco",
+      "disco de freio"
+     ]
+    },
+    {
+     "id": "alinhamento",
+     "nome": "Alinhamento e balanceamento",
+     "categoria": "Suspensão e pneus",
+     "pecasMin": 0,
+     "pecasMax": 0,
+     "maoMin": 120,
+     "maoMax": 180,
+     "duracao": 60,
+     "palavras": [
+      "alinhamento",
+      "balanceamento",
+      "pneu",
+      "volante"
+     ]
+    },
+    {
+     "id": "diagnostico",
+     "nome": "Diagnóstico elétrico (scanner)",
+     "categoria": "Elétrica",
+     "pecasMin": 0,
+     "pecasMax": 0,
+     "maoMin": 150,
+     "maoMax": 220,
+     "duracao": 90,
+     "palavras": [
+      "diagnostico",
+      "eletrica",
+      "scanner",
+      "injecao"
+     ]
+    },
+    {
+     "id": "bateria",
+     "nome": "Troca de bateria 60Ah",
+     "categoria": "Elétrica",
+     "pecasMin": 420,
+     "pecasMax": 690,
+     "maoMin": 0,
+     "maoMax": 30,
+     "duracao": 30,
+     "palavras": [
+      "bateria"
+     ]
+    },
+    {
+     "id": "revisao",
+     "nome": "Revisão completa (30 itens)",
+     "categoria": "Manutenção",
+     "pecasMin": 380,
+     "pecasMax": 900,
+     "maoMin": 250,
+     "maoMax": 400,
+     "duracao": 240,
+     "palavras": [
+      "revisao",
+      "checklist",
+      "preventiva"
+     ]
+    },
+    {
+     "id": "ar",
+     "nome": "Higienização e carga do ar-condicionado",
+     "categoria": "Conforto",
+     "pecasMin": 80,
+     "pecasMax": 160,
+     "maoMin": 120,
+     "maoMax": 190,
+     "duracao": 120,
+     "palavras": [
+      "ar condicionado",
+      "ar-condicionado",
+      "climatizacao",
+      "gas do ar"
+     ]
+    }
+   ],
+   "intents": [
+    {
+     "id": "freio",
+     "rotulo": "Problema no freio",
+     "palavras": [
+      "barulho ao frear",
+      "frear",
+      "freio",
+      "freando",
+      "chiando",
+      "chiado",
+      "rangendo",
+      "pedal baixo",
+      "pedal mole",
+      "pastilha"
+     ],
+     "servicos": [
+      "pastilha"
+     ],
+     "opcionais": [
+      "disco"
+     ],
+     "prioridade": "media",
+     "explicacao": "Barulho ao frear costuma indicar pastilhas no fim da vida útil. Se o disco estiver marcado, ele também precisa ser trocado."
+    },
+    {
+     "id": "naoliga",
+     "rotulo": "Carro não liga",
+     "palavras": [
+      "nao liga",
+      "nao pega",
+      "nao da partida",
+      "nao quer pegar",
+      "morreu",
+      "clique",
+      "bateria",
+      "descarregou",
+      "luz do painel apagou"
+     ],
+     "servicos": [
+      "diagnostico"
+     ],
+     "opcionais": [
+      "bateria"
+     ],
+     "prioridade": "alta",
+     "explicacao": "Quando o carro não liga, o primeiro passo é o diagnóstico elétrico. Na maioria dos casos é bateria, mas pode ser motor de partida ou alternador."
+    },
+    {
+     "id": "alinhamento",
+     "rotulo": "Direção puxando / volante tremendo",
+     "palavras": [
+      "puxando",
+      "puxa pro lado",
+      "puxa para o lado",
+      "volante tremendo",
+      "volante torto",
+      "trepidando",
+      "pneu gastando",
+      "pneu careca",
+      "vibrando"
+     ],
+     "servicos": [
+      "alinhamento"
+     ],
+     "opcionais": [],
+     "prioridade": "media",
+     "explicacao": "Carro puxando ou volante tremendo é sinal típico de alinhamento e balanceamento fora do padrão."
+    },
+    {
+     "id": "oleo",
+     "rotulo": "Troca de óleo",
+     "palavras": [
+      "oleo",
+      "luz do oleo",
+      "troca de oleo",
+      "filtro",
+      "km da troca",
+      "quilometragem"
+     ],
+     "servicos": [
+      "oleo"
+     ],
+     "opcionais": [],
+     "prioridade": "baixa",
+     "explicacao": "A troca de óleo e filtro é recomendada a cada 10 mil km ou 1 ano, o que vier primeiro (confira o manual do seu carro)."
+    },
+    {
+     "id": "revisao",
+     "rotulo": "Revisão",
+     "palavras": [
+      "revisao",
+      "viagem",
+      "pegar estrada",
+      "preventiva",
+      "checkup",
+      "check-up",
+      "10 mil",
+      "20 mil",
+      "30 mil"
+     ],
+     "servicos": [
+      "revisao"
+     ],
+     "opcionais": [
+      "alinhamento"
+     ],
+     "prioridade": "baixa",
+     "explicacao": "A revisão completa verifica 30 itens: fluidos, freios, suspensão, correias, iluminação e pneus."
+    },
+    {
+     "id": "ar",
+     "rotulo": "Ar-condicionado",
+     "palavras": [
+      "ar condicionado",
+      "ar-condicionado",
+      "ar nao gela",
+      "ar fraco",
+      "cheiro ruim",
+      "mofo",
+      "ar quente"
+     ],
+     "servicos": [
+      "ar"
+     ],
+     "opcionais": [],
+     "prioridade": "baixa",
+     "explicacao": "Ar fraco ou com cheiro ruim geralmente se resolve com higienização e recarga de gás."
+    },
+    {
+     "id": "eletrica",
+     "rotulo": "Falha elétrica / luz no painel",
+     "palavras": [
+      "luz da injecao",
+      "luz no painel",
+      "luz acesa",
+      "injecao",
+      "falhando",
+      "engasgando",
+      "perdendo forca",
+      "eletrica"
+     ],
+     "servicos": [
+      "diagnostico"
+     ],
+     "opcionais": [],
+     "prioridade": "media",
+     "explicacao": "Luz de injeção acesa ou falha no motor pedem leitura com scanner para encontrar o código do defeito."
+    }
+   ],
+   "perguntas": [
+    {
+     "campo": "cliente",
+     "texto": "Pra eu abrir seu atendimento, qual é o seu nome?"
+    },
+    {
+     "campo": "veiculo",
+     "texto": "Qual o modelo e o ano do carro? Ex.: Onix 2019"
+    },
+    {
+     "campo": "placa",
+     "texto": "E a placa? (ex.: ABC1D23)"
+    },
+    {
+     "campo": "urgencia",
+     "texto": "Pra quando você precisa?"
+    }
+   ],
+   "ajustes": [
+    {
+     "palavras": [
+      "hilux",
+      "sw4",
+      "amarok",
+      "ranger",
+      "s10",
+      "bmw",
+      "audi",
+      "mercedes",
+      "volvo",
+      "land rover",
+      "compass",
+      "commander",
+      "tiguan"
+     ],
+     "fator": 1.25,
+     "rotulo": "Peças de veículo maior/importado (+25%)"
+    }
+   ],
+   "modelos": [
+    "onix",
+    "hb20",
+    "gol",
+    "corolla",
+    "kwid",
+    "hilux",
+    "argo",
+    "civic",
+    "compass",
+    "fiesta",
+    "t-cross",
+    "sandero",
+    "polo",
+    "strada",
+    "creta",
+    "renegade",
+    "uno",
+    "prisma",
+    "cronos",
+    "kicks",
+    "tracker",
+    "mobi",
+    "saveiro",
+    "fox",
+    "ka",
+    "s10",
+    "ranger",
+    "sw4",
+    "virtus",
+    "nivus",
+    "pulse",
+    "fastback",
+    "toro",
+    "city",
+    "fit",
+    "yaris",
+    "etios",
+    "jetta",
+    "golf",
+    "cruze",
+    "spin",
+    "duster",
+    "logan",
+    "captur",
+    "hr-v",
+    "2008",
+    "208",
+    "c3"
+   ],
+   "exemplos": [
+    "Barulho ao frear",
+    "Meu carro não liga",
+    "Luz do óleo acendeu",
+    "Volante tremendo na estrada",
+    "Ar-condicionado não gela"
+   ],
+   "onboardingExemplos": [
+    "Minha oficina se chama Oficina Pista Livre",
+    "Troca de óleo R$ 180 1h",
+    "Pastilha de freio peças R$ 160 a 320 mão de obra R$ 120 1h30",
+    "Seg a sex 8h às 18h; sábado 8h às 12h"
+   ]
+  },
+  "loja": {
+   "id": "loja",
+   "rotulo": "Loja",
+   "negocio": {
+    "nome": "Casa Forte Materiais",
+    "cidade": "Campinas – SP",
+    "horario": [
+     null,
+     [
+      "08:00",
+      "18:30"
+     ],
+     [
+      "08:00",
+      "18:30"
+     ],
+     [
+      "08:00",
+      "18:30"
+     ],
+     [
+      "08:00",
+      "18:30"
+     ],
+     [
+      "08:00",
+      "18:30"
+     ],
+     [
+      "08:00",
+      "13:00"
+     ]
+    ]
+   },
+   "rotulos": {
+    "pecas": "Produtos",
+    "mao": "Serviço/entrega",
+    "objeto": "pedido",
+    "pronto": "Pedido pronto"
+   },
+   "catalogo": [
+    {
+     "id": "tinta",
+     "nome": "Kit pintura: tinta acrílica 18L + rolo, bandeja e fita",
+     "categoria": "Tintas",
+     "pecasMin": 380,
+     "pecasMax": 560,
+     "maoMin": 0,
+     "maoMax": 0,
+     "duracao": 30,
+     "palavras": [
+      "tinta",
+      "pintura",
+      "pintar",
+      "parede"
+     ]
+    },
+    {
+     "id": "entrega",
+     "nome": "Entrega no bairro (até 8 km)",
+     "categoria": "Logística",
+     "pecasMin": 0,
+     "pecasMax": 0,
+     "maoMin": 25,
+     "maoMax": 45,
+     "duracao": 180,
+     "palavras": [
+      "entrega",
+      "entregar",
+      "frete"
+     ]
+    },
+    {
+     "id": "hidraulica",
+     "nome": "Kit reparo hidráulico + instalação de torneira",
+     "categoria": "Hidráulica",
+     "pecasMin": 60,
+     "pecasMax": 140,
+     "maoMin": 80,
+     "maoMax": 120,
+     "duracao": 60,
+     "palavras": [
+      "torneira",
+      "vazamento",
+      "pia",
+      "sifao",
+      "registro"
+     ]
+    },
+    {
+     "id": "chuveiro",
+     "nome": "Chuveiro elétrico 7500W + instalação",
+     "categoria": "Elétrica",
+     "pecasMin": 120,
+     "pecasMax": 260,
+     "maoMin": 90,
+     "maoMax": 130,
+     "duracao": 60,
+     "palavras": [
+      "chuveiro",
+      "resistencia",
+      "agua fria"
+     ]
+    },
+    {
+     "id": "cimento",
+     "nome": "Cimento, areia e argamassa (reforma pequena)",
+     "categoria": "Básicos",
+     "pecasMin": 250,
+     "pecasMax": 420,
+     "maoMin": 0,
+     "maoMax": 0,
+     "duracao": 30,
+     "palavras": [
+      "cimento",
+      "areia",
+      "argamassa",
+      "reboco",
+      "piso",
+      "contrapiso"
+     ]
+    },
+    {
+     "id": "mdf",
+     "nome": "Corte de MDF sob medida (até 3 chapas)",
+     "categoria": "Madeiras",
+     "pecasMin": 90,
+     "pecasMax": 300,
+     "maoMin": 20,
+     "maoMax": 60,
+     "duracao": 120,
+     "palavras": [
+      "mdf",
+      "madeira",
+      "prateleira",
+      "corte",
+      "chapa"
+     ]
+    }
+   ],
+   "intents": [
+    {
+     "id": "pintura",
+     "rotulo": "Pintura",
+     "palavras": [
+      "pintar",
+      "pintura",
+      "tinta",
+      "parede",
+      "quarto",
+      "sala",
+      "descascando",
+      "mofo na parede"
+     ],
+     "servicos": [
+      "tinta",
+      "entrega"
+     ],
+     "opcionais": [],
+     "prioridade": "baixa",
+     "explicacao": "Para um cômodo de até 12 m², 18 litros de tinta acrílica rendem 2 demãos com folga."
+    },
+    {
+     "id": "vazamento",
+     "rotulo": "Vazamento / torneira",
+     "palavras": [
+      "vazando",
+      "vazamento",
+      "pingando",
+      "torneira",
+      "pia",
+      "sifao",
+      "registro",
+      "goteira"
+     ],
+     "servicos": [
+      "hidraulica"
+     ],
+     "opcionais": [
+      "entrega"
+     ],
+     "prioridade": "alta",
+     "explicacao": "Torneira pingando ou sifão vazando normalmente se resolve com o kit reparo. A instalação é feita por um parceiro da loja."
+    },
+    {
+     "id": "chuveiro",
+     "rotulo": "Chuveiro",
+     "palavras": [
+      "chuveiro",
+      "agua fria",
+      "nao esquenta",
+      "resistencia",
+      "queimou"
+     ],
+     "servicos": [
+      "chuveiro"
+     ],
+     "opcionais": [
+      "entrega"
+     ],
+     "prioridade": "media",
+     "explicacao": "Chuveiro que não esquenta costuma ser resistência queimada. Com 7500W, confira se o disjuntor é de 40A."
+    },
+    {
+     "id": "reforma",
+     "rotulo": "Reforma pequena",
+     "palavras": [
+      "reforma",
+      "cimento",
+      "areia",
+      "argamassa",
+      "reboco",
+      "piso",
+      "contrapiso",
+      "muro",
+      "obra"
+     ],
+     "servicos": [
+      "cimento",
+      "entrega"
+     ],
+     "opcionais": [],
+     "prioridade": "media",
+     "explicacao": "Para reforma pequena (até 10 m²), o kit básico cobre cimento, areia e argamassa."
+    },
+    {
+     "id": "madeira",
+     "rotulo": "Madeira / MDF",
+     "palavras": [
+      "mdf",
+      "madeira",
+      "prateleira",
+      "armario",
+      "nicho",
+      "cortar",
+      "chapa"
+     ],
+     "servicos": [
+      "mdf"
+     ],
+     "opcionais": [
+      "entrega"
+     ],
+     "prioridade": "baixa",
+     "explicacao": "O corte é feito na hora, com medidas em centímetros. Leve ou envie um croqui simples."
+    }
+   ],
+   "perguntas": [
+    {
+     "campo": "cliente",
+     "texto": "Pra eu montar seu orçamento, qual é o seu nome?"
+    },
+    {
+     "campo": "bairro",
+     "texto": "Em qual bairro é a entrega?"
+    },
+    {
+     "campo": "urgencia",
+     "texto": "Pra quando você precisa?"
+    }
+   ],
+   "ajustes": [],
+   "modelos": [],
+   "exemplos": [
+    "Quero pintar meu quarto",
+    "Torneira vazando na cozinha",
+    "Chuveiro não esquenta",
+    "Preciso cortar MDF pra prateleira"
+   ],
+   "onboardingExemplos": [
+    "Minha loja se chama Casa Forte Materiais",
+    "Chuveiro elétrico R$ 120 a 260 instalação R$ 90 1h",
+    "Entrega no bairro R$ 35 3h",
+    "Seg a sex 8h às 18h30; sábado 8h às 13h"
+   ]
+  }
+ },
+ "automacoes": {
+  "oficina": [
+   {
+    "id": "orcamento",
+    "nome": "Orçamento automático",
+    "gatilho": "Orçado",
+    "ativo": true,
+    "quando": "Na hora",
+    "template": "Oi, {cliente}! Seu orçamento para {servico} ficou entre {valor}. Prazo combinado: {prazo}. Responda APROVAR para confirmar."
+   },
+   {
+    "id": "confirmacao",
+    "nome": "Confirmação do serviço",
+    "gatilho": "Aprovado",
+    "ativo": true,
+    "quando": "Na hora",
+    "template": "Combinado, {cliente}! {servico} confirmado na {negocio}. Traga o {veiculo} no horário escolhido. Prazo: {prazo}."
+   },
+   {
+    "id": "lembrete",
+    "nome": "Lembrete do agendamento",
+    "gatilho": "Aprovado",
+    "ativo": true,
+    "quando": "2h antes do horário",
+    "template": "Lembrete: hoje é dia de cuidar do {veiculo}, {cliente}! Estamos te esperando na {negocio}."
+   },
+   {
+    "id": "andamento",
+    "nome": "Aviso de início",
+    "gatilho": "Em serviço",
+    "ativo": true,
+    "quando": "Na hora",
+    "template": "{cliente}, o {veiculo} já está no elevador. Começamos: {servico}. Te avisamos quando ficar pronto."
+   },
+   {
+    "id": "pronto",
+    "nome": "Carro pronto",
+    "gatilho": "Pronto",
+    "ativo": true,
+    "quando": "Na hora",
+    "template": "Boa notícia, {cliente}: o {veiculo} está pronto! Pode retirar até as 18h. Valor: {valor}."
+   },
+   {
+    "id": "posvenda",
+    "nome": "Pós-venda e NPS",
+    "gatilho": "Entregue",
+    "ativo": true,
+    "quando": "1 dia depois",
+    "template": "Oi, {cliente}! Como está o {veiculo} depois do serviço? De 0 a 10, quanto você indicaria a {negocio} pra um amigo?"
+   }
+  ],
+  "loja": [
+   {
+    "id": "orcamento",
+    "nome": "Orçamento automático",
+    "gatilho": "Orçado",
+    "ativo": true,
+    "quando": "Na hora",
+    "template": "Oi, {cliente}! Seu orçamento de {servico} ficou entre {valor}. Prazo: {prazo}. Responda APROVAR para separar o pedido."
+   },
+   {
+    "id": "confirmacao",
+    "nome": "Confirmação do pedido",
+    "gatilho": "Aprovado",
+    "ativo": true,
+    "quando": "Na hora",
+    "template": "Pedido confirmado, {cliente}! Já estamos separando {servico} na {negocio}. Prazo: {prazo}."
+   },
+   {
+    "id": "lembrete",
+    "nome": "Lembrete de pagamento/retirada",
+    "gatilho": "Aprovado",
+    "ativo": true,
+    "quando": "4h depois, se não pago",
+    "template": "{cliente}, seu pedido está reservado na {negocio}. Se precisar do link de pagamento, é só pedir aqui."
+   },
+   {
+    "id": "andamento",
+    "nome": "Pedido em separação",
+    "gatilho": "Em serviço",
+    "ativo": true,
+    "quando": "Na hora",
+    "template": "{cliente}, seu pedido está em separação: {servico}."
+   },
+   {
+    "id": "pronto",
+    "nome": "Pedido pronto / saiu para entrega",
+    "gatilho": "Pronto",
+    "ativo": true,
+    "quando": "Na hora",
+    "template": "{cliente}, seu pedido está pronto e já pode ser retirado (ou saiu para entrega). Valor: {valor}."
+   },
+   {
+    "id": "posvenda",
+    "nome": "Pós-venda e NPS",
+    "gatilho": "Entregue",
+    "ativo": true,
+    "quando": "1 dia depois",
+    "template": "Oi, {cliente}! Deu tudo certo com {servico}? De 0 a 10, quanto você indicaria a {negocio}?"
+   }
+  ]
+ },
+ "sla": {
+  "oficina": {
+   "alta": {
+    "respostaMin": 5,
+    "conclusaoHoras": 4
+   },
+   "media": {
+    "respostaMin": 15,
+    "conclusaoHoras": 10
+   },
+   "baixa": {
+    "respostaMin": 60,
+    "conclusaoHoras": 30
+   }
+  },
+  "loja": {
+   "alta": {
+    "respostaMin": 5,
+    "conclusaoHoras": 4
+   },
+   "media": {
+    "respostaMin": 15,
+    "conclusaoHoras": 8
+   },
+   "baixa": {
+    "respostaMin": 60,
+    "conclusaoHoras": 24
+   }
+  }
+ },
+ "ticketsExemplo": [
+  {
+   "seg": "oficina",
+   "cliente": "Carla Mendes",
+   "telefone": "(11) 98412-3307",
+   "problema": "Tá fazendo um barulho chato toda vez que eu freio",
+   "intent": "freio",
+   "servicos": [
+    "pastilha"
+   ],
+   "status": "Entregue",
+   "prioridade": "media",
+   "criadoHaMin": 39180,
+   "respostaSeg": 6,
+   "veiculo": "Onix 2019",
+   "placa": "FTR4B21",
+   "nps": 10,
+   "id": "OF-1001"
+  },
+  {
+   "seg": "oficina",
+   "cliente": "Rafael Souza",
+   "telefone": "(11) 99135-7742",
+   "problema": "Carro não liga, só faz um clique",
+   "intent": "naoliga",
+   "servicos": [
+    "diagnostico",
+    "bateria"
+   ],
+   "status": "Entregue",
+   "prioridade": "alta",
+   "criadoHaMin": 36120,
+   "respostaSeg": 4,
+   "veiculo": "HB20 2020",
+   "placa": "GHK2C45",
+   "nps": 9,
+   "id": "OF-1002"
+  },
+  {
+   "seg": "oficina",
+   "cliente": "Juliana Prado",
+   "telefone": "(11) 97720-1184",
+   "problema": "Preciso trocar o óleo, a luz acendeu",
+   "intent": "oleo",
+   "servicos": [
+    "oleo"
+   ],
+   "status": "Entregue",
+   "prioridade": "baixa",
+   "criadoHaMin": 32280,
+   "respostaSeg": 7,
+   "veiculo": "Kwid 2022",
+   "placa": "RTE8D90",
+   "nps": 10,
+   "id": "OF-1003"
+  },
+  {
+   "seg": "oficina",
+   "cliente": "Marcos Lima",
+   "telefone": "(11) 98801-4459",
+   "problema": "Vou viajar mês que vem, quero fazer revisão",
+   "intent": "revisao",
+   "servicos": [
+    "revisao",
+    "alinhamento"
+   ],
+   "status": "Entregue",
+   "prioridade": "baixa",
+   "criadoHaMin": 29000,
+   "respostaSeg": 5,
+   "veiculo": "Corolla 2021",
+   "placa": "QWE3F12",
+   "nps": 8,
+   "id": "OF-1004"
+  },
+  {
+   "seg": "oficina",
+   "cliente": "Patrícia Alves",
+   "telefone": "(11) 99654-2210",
+   "problema": "Volante tremendo acima de 80 km/h",
+   "intent": "alinhamento",
+   "servicos": [
+    "alinhamento"
+   ],
+   "status": "Entregue",
+   "prioridade": "media",
+   "criadoHaMin": 26340,
+   "respostaSeg": 8,
+   "veiculo": "Argo 2021",
+   "placa": "BNM5G67",
+   "nps": 9,
+   "id": "OF-1005"
+  },
+  {
+   "seg": "oficina",
+   "cliente": "Diego Ramos",
+   "telefone": "(11) 98233-9075",
+   "problema": "Luz da injeção acesa e o carro engasgando",
+   "intent": "eletrica",
+   "servicos": [
+    "diagnostico"
+   ],
+   "status": "Entregue",
+   "prioridade": "media",
+   "criadoHaMin": 21690,
+   "respostaSeg": 5,
+   "veiculo": "Hilux 2018",
+   "placa": "KLO9H34",
+   "nps": 7,
+   "atrasou": true,
+   "id": "OF-1006"
+  },
+  {
+   "seg": "oficina",
+   "cliente": "Fernanda Costa",
+   "telefone": "(11) 97316-6621",
+   "problema": "Ar-condicionado não gela mais",
+   "intent": "ar",
+   "servicos": [
+    "ar"
+   ],
+   "status": "Entregue",
+   "prioridade": "baixa",
+   "criadoHaMin": 17780,
+   "respostaSeg": 6,
+   "veiculo": "Compass 2020",
+   "placa": "POI1J56",
+   "nps": 10,
+   "id": "OF-1007"
+  },
+  {
+   "seg": "oficina",
+   "cliente": "Thiago Nunes",
+   "telefone": "(11) 99412-8803",
+   "problema": "Pedal do freio tá baixo e chiando",
+   "intent": "freio",
+   "servicos": [
+    "pastilha",
+    "disco"
+   ],
+   "status": "Entregue",
+   "prioridade": "alta",
+   "criadoHaMin": 13020,
+   "respostaSeg": 4,
+   "veiculo": "Civic 2017",
+   "placa": "UYT7K89",
+   "nps": 9,
+   "id": "OF-1008"
+  },
+  {
+   "seg": "oficina",
+   "cliente": "Beatriz Rocha",
+   "telefone": "(11) 98067-3348",
+   "problema": "Quero trocar óleo e filtro",
+   "intent": "oleo",
+   "servicos": [
+    "oleo"
+   ],
+   "status": "Entregue",
+   "prioridade": "baixa",
+   "criadoHaMin": 8940,
+   "respostaSeg": 5,
+   "veiculo": "Polo 2023",
+   "placa": "MNB2L01",
+   "nps": 10,
+   "id": "OF-1009"
+  },
+  {
+   "seg": "oficina",
+   "cliente": "André Martins",
+   "telefone": "(11) 99781-5562",
+   "problema": "Carro puxando pra direita",
+   "intent": "alinhamento",
+   "servicos": [
+    "alinhamento"
+   ],
+   "status": "Entregue",
+   "prioridade": "media",
+   "criadoHaMin": 5960,
+   "respostaSeg": 9,
+   "veiculo": "Strada 2021",
+   "placa": "VCX4M23",
+   "nps": 6,
+   "atrasou": true,
+   "id": "OF-1010"
+  },
+  {
+   "seg": "oficina",
+   "cliente": "Camila Duarte",
+   "telefone": "(11) 97543-1129",
+   "problema": "Bateria arriou de novo hoje cedo",
+   "intent": "naoliga",
+   "servicos": [
+    "diagnostico",
+    "bateria"
+   ],
+   "status": "Pronto",
+   "prioridade": "alta",
+   "criadoHaMin": 230,
+   "respostaSeg": 4,
+   "veiculo": "Sandero 2016",
+   "placa": "ZAQ6N45",
+   "id": "OF-1011"
+  },
+  {
+   "seg": "oficina",
+   "cliente": "Lucas Pereira",
+   "telefone": "(11) 98625-7016",
+   "problema": "Revisão dos 40 mil km",
+   "intent": "revisao",
+   "servicos": [
+    "revisao"
+   ],
+   "status": "Em serviço",
+   "prioridade": "baixa",
+   "criadoHaMin": 1560,
+   "respostaSeg": 6,
+   "veiculo": "T-Cross 2022",
+   "placa": "XSW8P67",
+   "id": "OF-1012"
+  },
+  {
+   "seg": "oficina",
+   "cliente": "Renata Gomes",
+   "telefone": "(11) 99208-4471",
+   "problema": "Barulho ao frear, parece metal raspando",
+   "intent": "freio",
+   "servicos": [
+    "pastilha",
+    "disco"
+   ],
+   "status": "Em serviço",
+   "prioridade": "alta",
+   "criadoHaMin": 205,
+   "respostaSeg": 3,
+   "veiculo": "Creta 2020",
+   "placa": "CDE1Q89",
+   "prazoEmMin": 40,
+   "id": "OF-1013"
+  },
+  {
+   "seg": "oficina",
+   "cliente": "Bruno Teixeira",
+   "telefone": "(11) 97860-2235",
+   "problema": "Luz no painel acendeu e o carro está falhando",
+   "intent": "eletrica",
+   "servicos": [
+    "diagnostico"
+   ],
+   "status": "Em serviço",
+   "prioridade": "media",
+   "criadoHaMin": 900,
+   "respostaSeg": 7,
+   "veiculo": "Renegade 2019",
+   "placa": "VFR3R12",
+   "prazoEmMin": -35,
+   "id": "OF-1014"
+  },
+  {
+   "seg": "oficina",
+   "cliente": "Aline Barbosa",
+   "telefone": "(11) 98357-6698",
+   "problema": "Pneu da frente gastando só de um lado",
+   "intent": "alinhamento",
+   "servicos": [
+    "alinhamento"
+   ],
+   "status": "Aprovado",
+   "prioridade": "media",
+   "criadoHaMin": 140,
+   "respostaSeg": 5,
+   "veiculo": "Cronos 2022",
+   "placa": "BGT5S34",
+   "id": "OF-1015"
+  },
+  {
+   "seg": "oficina",
+   "cliente": "Gustavo Freitas",
+   "telefone": "(11) 99027-3384",
+   "problema": "Ar com cheiro de mofo",
+   "intent": "ar",
+   "servicos": [
+    "ar"
+   ],
+   "status": "Orçado",
+   "prioridade": "baixa",
+   "criadoHaMin": 2980,
+   "respostaSeg": 6,
+   "veiculo": "Fiesta 2014",
+   "placa": "NHY7T56",
+   "prazoEmMin": -180,
+   "id": "OF-1016"
+  },
+  {
+   "seg": "oficina",
+   "cliente": "Larissa Moura",
+   "telefone": "(11) 97194-5527",
+   "problema": "Quero orçamento de troca de óleo",
+   "intent": "oleo",
+   "servicos": [
+    "oleo"
+   ],
+   "status": "Orçado",
+   "prioridade": "baixa",
+   "criadoHaMin": 45,
+   "respostaSeg": 5,
+   "veiculo": "Mobi 2021",
+   "placa": "MJU9U78",
+   "id": "OF-1017"
+  },
+  {
+   "seg": "oficina",
+   "cliente": "Eduardo Pinto",
+   "telefone": "(11) 98746-0193",
+   "problema": "Meu carro não pega de jeito nenhum, tô no trabalho",
+   "intent": "naoliga",
+   "servicos": [
+    "diagnostico"
+   ],
+   "status": "Novo",
+   "prioridade": "alta",
+   "criadoHaMin": 9,
+   "respostaSeg": 0,
+   "veiculo": "Gol 2015",
+   "placa": "KIO2V90",
+   "humano": true,
+   "respostaHumanoSeg": 240,
+   "id": "OF-1018"
+  },
+  {
+   "seg": "loja",
+   "cliente": "Vanessa Cardoso",
+   "telefone": "(19) 98811-2046",
+   "problema": "Quero pintar o quarto da minha filha",
+   "intent": "pintura",
+   "servicos": [
+    "tinta",
+    "entrega"
+   ],
+   "status": "Entregue",
+   "prioridade": "baixa",
+   "criadoHaMin": 27660,
+   "respostaSeg": 6,
+   "bairro": "Cambuí",
+   "nps": 10,
+   "id": "LJ-1019"
+  },
+  {
+   "seg": "loja",
+   "cliente": "Felipe Araújo",
+   "telefone": "(19) 99273-6650",
+   "problema": "Torneira da cozinha pingando sem parar",
+   "intent": "vazamento",
+   "servicos": [
+    "hidraulica"
+   ],
+   "status": "Entregue",
+   "prioridade": "alta",
+   "criadoHaMin": 16040,
+   "respostaSeg": 4,
+   "bairro": "Taquaral",
+   "nps": 9,
+   "id": "LJ-1020"
+  },
+  {
+   "seg": "loja",
+   "cliente": "Simone Ribeiro",
+   "telefone": "(19) 97452-8817",
+   "problema": "Chuveiro não esquenta mais",
+   "intent": "chuveiro",
+   "servicos": [
+    "chuveiro"
+   ],
+   "status": "Entregue",
+   "prioridade": "media",
+   "criadoHaMin": 10180,
+   "respostaSeg": 5,
+   "bairro": "Barão Geraldo",
+   "nps": 8,
+   "id": "LJ-1021"
+  },
+  {
+   "seg": "loja",
+   "cliente": "Ricardo Melo",
+   "telefone": "(19) 98390-1172",
+   "problema": "Vou refazer o contrapiso da lavanderia",
+   "intent": "reforma",
+   "servicos": [
+    "cimento",
+    "entrega"
+   ],
+   "status": "Aprovado",
+   "prioridade": "media",
+   "criadoHaMin": 180,
+   "respostaSeg": 7,
+   "bairro": "Guanabara",
+   "id": "LJ-1022"
+  },
+  {
+   "seg": "loja",
+   "cliente": "Tatiane Lopes",
+   "telefone": "(19) 99618-4425",
+   "problema": "Preciso de 3 prateleiras de MDF cortadas",
+   "intent": "madeira",
+   "servicos": [
+    "mdf"
+   ],
+   "status": "Em serviço",
+   "prioridade": "baixa",
+   "criadoHaMin": 1200,
+   "respostaSeg": 6,
+   "bairro": "retirar",
+   "id": "LJ-1023"
+  },
+  {
+   "seg": "loja",
+   "cliente": "Paulo Cunha",
+   "telefone": "(19) 97705-3390",
+   "problema": "Sifão da pia do banheiro vazando",
+   "intent": "vazamento",
+   "servicos": [
+    "hidraulica",
+    "entrega"
+   ],
+   "status": "Orçado",
+   "prioridade": "alta",
+   "criadoHaMin": 80,
+   "respostaSeg": 4,
+   "bairro": "Castelo",
+   "prazoEmMin": 25,
+   "id": "LJ-1024"
+  },
+  {
+   "seg": "loja",
+   "cliente": "Mariana Vieira",
+   "telefone": "(19) 98144-6608",
+   "problema": "Quero pintar a sala, uns 15 m²",
+   "intent": "pintura",
+   "servicos": [
+    "tinta"
+   ],
+   "status": "Novo",
+   "prioridade": "baixa",
+   "criadoHaMin": 30,
+   "respostaSeg": 6,
+   "bairro": "Cambuí",
+   "id": "LJ-1025"
+  }
+ ]
+}

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atende AI — CRM com atendimento automático no Telegram (demonstração)</title>
+<meta name="description" content="Demonstração de um CRM com bot de atendimento no Telegram para oficinas e lojas (WhatsApp em breve): orçamento automático, SLA, automações e dashboard. IA simulada por regras.">
+<meta name="theme-color" content="#070B14">
+<link rel="icon" href="img/icone.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<a class="skip" href="#conteudo">Pular para o conteúdo</a>
+<header class="topo">
+  <div class="topo__linha">
+    <a class="marca" href="#/" aria-label="Atende AI, início">
+      <img src="img/icone.svg" alt="" width="32" height="32">
+      <span>Atende<b>AI</b></span>
+    </a>
+    <span class="selo-demo" title="Nada aqui está conectado ao Telegram, ao WhatsApp ou a uma IA real">Demonstração — IA simulada</span>
+    <div class="seg" role="group" aria-label="Segmento do negócio">
+      <button type="button" class="seg__btn" data-seg="oficina" aria-pressed="true">🔧 Oficina</button>
+      <button type="button" class="seg__btn" data-seg="loja" aria-pressed="false">🏬 Loja</button>
+    </div>
+  </div>
+  <nav class="nav" aria-label="Principal">
+    <a href="#/" data-rota="">Início</a>
+    <a href="#/onboarding" data-rota="onboarding">Cadastro</a>
+    <a href="#/atendimento" data-rota="atendimento">Atendimento</a>
+    <a href="#/pedidos" data-rota="pedidos">Pedidos</a>
+    <a href="#/dashboard" data-rota="dashboard">Dashboard</a>
+    <a href="#/config" data-rota="config">Configurações</a>
+  </nav>
+</header>
+<main id="conteudo" tabindex="-1">
+  <div class="carregando" role="status">Carregando a demonstração…</div>
+</main>
+<div id="gaveta-raiz"></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<footer class="rodape">
+  <p>Atende AI · protótipo de produto · IA simulada por regras, sem integração real com Telegram, WhatsApp ou modelos de IA · dados de exemplo fictícios</p>
+  <p><a href="https://github.com/guilhermeromio-netto-prog/atende-ai">Código no GitHub</a> · <a href="https://github.com/guilhermeromio-netto-prog/atende-ai/blob/main/docs/arquitetura.md">Arquitetura da fase 2</a> · <strong>byGui</strong></p>
+</footer>
+<script src="js/util.js"></script>
+<script src="js/store.js"></script>
+<script src="js/motor.js"></script>
+<script src="js/canais/base.js"></script>
+<script src="js/canais/telegram.js"></script>
+<script src="js/canais/whatsapp.js"></script>
+<script src="js/conversa.js"></script>
+<script src="js/inicio.js"></script>
+<script src="js/onboarding.js"></script>
+<script src="js/atendimento.js"></script>
+<script src="js/pedidos.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
