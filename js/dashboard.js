@@ -173,11 +173,27 @@
     main.querySelectorAll('#db-piloto input').forEach((i) => i.addEventListener('change', salvar));
   }
 
+  // Plano do negócio: ao vivo vem da API do bot (negocio.plano); na demonstração, a loja virtual mostra o Pro.
+  function plano() {
+    if (S().vivoAtivo()) { const n = S().vivo.negocio || {}; return { pro: n.plano === 'pro', recursos: n.recursos || {}, vivo: true }; }
+    return { pro: S().seg() === 'ecommerce', recursos: { carrinho_abandonado: true, posvenda: true, alerta_sla: true, resumo_diario: '19:00', secretario: true }, vivo: false };
+  }
+  function faixaPro() {
+    const p = plano();
+    if (!p.pro) return '';
+    const r = p.recursos; const on = (b) => (b ? '✅' : '—');
+    return '<section class="faixa-pro" aria-label="Plano Pro"><strong>⭐ Plano Pro' + (p.vivo ? '' : ' (demonstração)') + '</strong>' +
+      '<span>Carrinho abandonado ' + on(r.carrinho_abandonado) + '</span><span>Pós-venda ' + on(r.posvenda) + '</span><span>Alerta de SLA ' + on(r.alerta_sla) + '</span>' +
+      '<span>Resumo diário ' + (r.resumo_diario ? 'às ' + U.esc(String(r.resumo_diario).replace(':00', 'h')) : '—') + '</span><span>Secretário ' + on(r.secretario !== false) + '</span>' +
+      '<a href="#/como-usar" data-ir="guia-pro">Guia rápido Pro</a></section>';
+  }
+
   function render(main) {
     main.innerHTML = `
-      <div class="cab"><div><div class="olho">Passo 4 · Gestão</div><h1>Dashboard ${({ oficina: 'de atendimento da oficina', loja: 'de atendimento da loja', ecommerce: 'da loja virtual' })[S().seg()]}</h1><p id="db-legenda"></p></div>
+      <div class="cab"><div><div class="olho">Passo 4 · Gestão</div><h1>Dashboard ${({ oficina: 'de atendimento da oficina', loja: 'de atendimento da loja', ecommerce: 'da loja virtual' })[S().seg()]}${plano().pro ? ' <span class="chip chip--pro selo-pro" title="Plano Pro: automações ligadas e resumo diário às 19h">⭐ Pro</span>' : ''}</h1><p id="db-legenda"></p></div>
         <button type="button" class="btn" id="db-csv">⬇️ Exportar CSV</button></div>
       ${U.faixaVivo()}
+      ${faixaPro()}
       <div class="filtros">
         <label class="campo">Período<select class="inp" id="db-periodo">${[['7', 'Últimos 7 dias'], ['30', 'Últimos 30 dias'], ['90', 'Últimos 90 dias'], ['todos', 'Tudo']].map(([v, r]) => '<option value="' + v + '"' + (f.periodo === v ? ' selected' : '') + '>' + r + '</option>').join('')}</select></label>
         <label class="campo">Status<select class="inp" id="db-status"><option value="">Todos</option>${M.statusDe(S().seg()).concat(S().seg() === 'ecommerce' ? ['Em análise', 'Resolvido'] : []).map((s) => '<option' + (f.status === s ? ' selected' : '') + '>' + s + '</option>').join('')}</select></label>
@@ -190,12 +206,17 @@
         <section class="card grafico"><h2>Situação do SLA</h2><div id="db-sla"></div></section>
       </div>
       <section class="card" style="margin-top:16px"><h2>Pedidos em risco de SLA</h2><div id="db-risco"></div></section>
+      <section class="card" style="margin-top:16px" aria-labelledby="db-sec-t"><div class="cab cab--p"><h2 id="db-sec-t">🗂️ Secretário: tarefas do dono por status</h2><a class="btn btn--p" href="#/secretario">Abrir o Secretário</a></div><div id="db-sec"></div></section>
       <section class="card" style="margin-top:16px" aria-labelledby="db-pil-t"><h2 id="db-pil-t">🧪 Piloto: antes × depois</h2><div id="db-piloto"></div></section>`;
     main.querySelector('#db-periodo').addEventListener('change', (e) => { f.periodo = e.target.value; desenhar(main); });
     main.querySelector('#db-status').addEventListener('change', (e) => { f.status = e.target.value; desenhar(main); });
     main.querySelector('#db-csv').addEventListener('click', csv);
+    const lp = main.querySelector('.faixa-pro a'); if (lp) lp.addEventListener('click', () => { AT.irPara = 'guia-pro'; });
     desenhar(main);
     main.querySelector('#db-piloto').innerHTML = piloto(); ligarPiloto(main);
+    const sec = () => { const el = main.querySelector('#db-sec'); if (!el) return; const l = AT.Sec.tarefas();
+      el.innerHTML = '<p class="pequeno muted">' + AT.Sec.resumoPorStatus(l).map(([s, k]) => AT.Sec.STATUS_TXT[s] + ': <strong>' + k + '</strong>').join(' · ') + (AT.Sec.vivo() ? ' · <span class="chip chip--ok">ao vivo (/api/secretario)</span>' : ' · <span class="chip chip--exemplo">simulação</span>') + '</p>' + AT.Sec.painel(l, true); };
+    sec(); if (S().conexao()) AT.Sec.lerVivo().then(sec);
     AT.V.dashboard._tick = () => { if (document.body.contains(main.querySelector('#db-kpis'))) desenhar(main); };
   }
   AT.V = AT.V || {};

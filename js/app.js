@@ -2,7 +2,7 @@
 (function (AT) {
   'use strict';
   const U = AT.U;
-  const ROTAS = { '': 'inicio', 'como-usar': 'comoUsar', onboarding: 'onboarding', atendimento: 'atendimento', pedidos: 'pedidos', dashboard: 'dashboard', config: 'config', admin: 'admin', privacidade: 'privacidade' };
+  const ROTAS = { '': 'inicio', 'como-usar': 'comoUsar', onboarding: 'onboarding', atendimento: 'atendimento', pedidos: 'pedidos', dashboard: 'dashboard', config: 'config', admin: 'admin', privacidade: 'privacidade', secretario: 'secretario', manual: 'manual' };
   const main = document.getElementById('conteudo');
   let atual = null;
 
@@ -46,6 +46,7 @@
     setInterval(async () => {
       if (AT.S.conexao()) await AT.S.atualizarVivo();
       const lembrou = AT.ConversaEcom.vigiar();
+      AT.Sec.vigiar();
       const v = AT.V[ROTAS[atual]]; if (v && v._tick) v._tick(lembrou);
     }, 30000);
   }

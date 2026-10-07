@@ -17,6 +17,8 @@ Protótipo de produto para **oficinas mecânicas, lojas e lojas virtuais**: o cl
 | `#/dashboard` | KPIs, atendimentos por dia, funil, serviços mais pedidos, situação do SLA, pedidos em risco, filtros e exportação CSV |
 | `#/admin` | Modo plataforma (dono da plataforma): todas as lojas, KPIs globais, detalhe por loja, saúde do piloto, antes × depois, CSV. Dados reais só com a chave de administrador; sem ela, demonstração |
 | `#/privacidade` | Privacidade e termo de uso do piloto (LGPD) |
+| `#/secretario` | Secretário do dono: uma mensagem com vários pedidos vira tarefas (agenda, lembretes, contas), pergunta só o que falta, painel por status |
+| `#/manual` | Manual do lojista (fonte: `docs/MANUAL-DO-LOJISTA.md`), pronto para imprimir ou salvar em PDF |
 | `#/config` | Modelos de mensagem com `{cliente}` `{servico}` `{prazo}`…, SLA por prioridade, canais, exportar/importar/restaurar dados |
 
 ## Estrutura
@@ -32,6 +34,11 @@ js/ecommerce.js         loja virtual: busca tolerante a erros, frete por CEP, ca
 js/conversa-ecom.js     conversa do cliente da loja virtual (carrinho → pagamento do lojista → rastreio/troca)
 js/admin.js             Modo plataforma (#/admin): lê /api/admin/export com a chave de administrador
 js/privacidade.js       página de privacidade e termo do piloto
+js/secretario.js        Secretário do dono (motor JS + simulação + painel)
+js/doc.js · manual.js   renderizador mínimo de Markdown · página do manual
+bot/pro.py              versão Pro: assistente de 1 link, /plano, /modelos, resumo diário 19h, boas-vindas
+bot/secretario.py       Secretário do dono no bot
+docs/MANUAL-DO-LOJISTA.md · docs/PLAYBOOK-ESCALA.md · docs/secretario/ (spec de origem)
 js/canais/base.js       núcleo de renderização de conversa
 js/canais/telegram.js   adaptador Telegram (principal)
 js/canais/whatsapp.js   adaptador WhatsApp (em breve)
@@ -51,6 +58,12 @@ Terceiro segmento, no mesmo motor e no mesmo `dados.json` do bot e do site: prod
 - **Administrador:** `/admin <código>` (código gerado na 1ª execução em `bot/data/admin.json`, fora do Git) libera `/plataforma`, `/lojas`, `/loja <slug>`, `/piloto <slug>`, `/admin_conectar` e `/excluir_loja <slug>`. API `/api/admin/*` com chave própria (`X-Atende-Admin`), separada das chaves das lojas e sem dados pessoais dos clientes.
 - **Termo do piloto:** criar/assumir loja exige “Aceito” (registrado com data e hora). Cliente recebe aviso de privacidade na 1ª mensagem; `/excluir_dados` apaga/anonimiza (cliente) ou pede exclusão da loja (dono → admin). Ver [docs/privacidade.md](docs/privacidade.md).
 - **Piloto:** `piloto: true` por loja, “antes” preenchido pelo dono com `/antes`, saúde do piloto (dias ativos, mensagens/dia, pedidos, NPS). Playbook: [docs/piloto.md](docs/piloto.md).
+
+## Versão Pro (plug and play) e Secretário do dono
+
+- **Assistente Pro de 1 link:** https://t.me/Applojas10_bot?start=pro-lojavirtual → nome da loja → termo do piloto → presets de frete e pagamento (+ chave Pix) → lista de produtos colada (`nome; preço; estoque; dias`, CSV ou texto livre). Em menos de 3 minutos a loja está no ar com `plano: "pro"`, automações ligadas (carrinho abandonado, pós-venda, alerta de SLA), modelos de mensagem (`/modelos`) e **resumo diário às 19h** (America/Sao_Paulo) no Telegram do dono. `/plano` lista os recursos; admin liga numa loja existente com `/pro <slug>`. Selo ⭐ Pro no Dashboard e no Modo plataforma.
+- **Secretário do dono:** “Agendar reunião com João, pagar conta de luz, lembrar de comprar leite” vira 3 tarefas; pergunta só o que falta numa mensagem; agenda nunca sem dia e hora; lembrete sem hora = hoje 18h; conta fica `aguardando_ok` até o dono tocar em “Paguei”. `/agenda`, `/lembretes`, `/contas`, API `/api/secretario`. Spec: [docs/secretario/](docs/secretario/).
+- **Manual do lojista** ([docs/MANUAL-DO-LOJISTA.md](docs/MANUAL-DO-LOJISTA.md), `#/manual`, `/manual` e `/missao` no bot) e **playbook de escala** interno ([docs/PLAYBOOK-ESCALA.md](docs/PLAYBOOK-ESCALA.md), também no `#/admin`).
 
 ## Bot de teste no Telegram
 

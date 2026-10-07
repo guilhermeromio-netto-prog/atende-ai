@@ -20,7 +20,7 @@ TENTATIVAS_MAX = 5
 BLOQUEIO_MS = 3600000
 CMD_ADMIN = [("plataforma", "Admin: indicadores globais"), ("lojas", "Admin: todas as lojas"), ("loja", "Admin: detalhe de uma loja (/loja slug)"),
              ("piloto", "Admin: marcar loja como piloto (/piloto slug)"), ("admin_conectar", "Admin: abrir o Modo plataforma na web"),
-             ("excluir_loja", "Admin: excluir loja (/excluir_loja slug)")]
+             ("pro", "Admin: ligar o plano Pro (/pro slug, ou /pro slug off)"), ("excluir_loja", "Admin: excluir loja (/excluir_loja slug)")]
 REMOVIDO = "[removido a pedido do titular]"
 
 
@@ -112,7 +112,7 @@ def resumo_loja(t, tks, usuarios, agora=None):
     cvt = convertidos(t, tks)
     resp = [x.get("tempoRespostaSeg", 0) for x in tks if x.get("tempoRespostaSeg")]
     return {"id": t["id"], "nome": t["nome"], "segmento": t["segmento"], "exemplo": bool(t.get("exemplo")), "piloto": bool(t.get("piloto")),
-            "donos": len(t.get("donos", [])), "criado": t.get("criado"), "conversas": conv, "pedidos": len(tks), "convertidos": len(cvt),
+            "plano": t.get("plano") or "basico", "donos": len(t.get("donos", [])), "criado": t.get("criado"), "conversas": conv, "pedidos": len(tks), "convertidos": len(cvt),
             "conversao": round(len(cvt) / conv * 100) if conv else None, "faturamento": faturamento(t, tks),
             "tempoRespostaSeg": round(sum(resp) / len(resp)) if resp else None, "ultimaAtividade": ultima_atividade(t, tks, usuarios),
             "termoAceitoEm": max([x["aceitoEm"] for x in t.get("termos", [])] or [0]) or None,
@@ -210,6 +210,8 @@ class PlataformaMixin:
         """Conta a conversa e devolve a nota de privacidade (só na 1ª conversa deste cliente com este negócio)."""
         t.setdefault("metricas", {}).setdefault("conversas", 0)
         t["metricas"]["conversas"] += 1
+        hoje = t.setdefault("atividade", {}).setdefault(dia(M.agora_ms()), {"cli": 0, "dono": 0})
+        hoje["conv"] = hoje.get("conv", 0) + 1
         avisos = u.setdefault("privacidade", {})
         if t["id"] in avisos:
             return ""
@@ -248,6 +250,8 @@ class PlataformaMixin:
                 return self.tg.send(cid, "Esse negócio já tem dono. Peça o código de atendente para ele e envie /dono CÓDIGO.")
         t.setdefault("termos", []).append({"chat": cid, "aceitoEm": agora, "versao": TERMO_VERSAO})
         self.tg.send(cid, f"✅ Termo aceito em {M.data_hora(agora)}. Obrigado!")
+        if pend.get("pro"):
+            return self.pro_ativar(cid, u, t)
         if tipo == "existente":
             u["modo"] = "dono"
             return self.cmd_painel(cid, u)
@@ -324,6 +328,7 @@ class PlataformaMixin:
         donos = list(t.get("donos", []))
         n = len([x for x in self.db.d["tickets"] if x["tenant"] == slug])
         self.db.d["tickets"] = [x for x in self.db.d["tickets"] if x["tenant"] != slug]
+        self.db.d["tarefas"] = [x for x in self.db.d.get("tarefas", []) if x["tenant"] != slug]
         self.db.d["tenants"].pop(slug)
         for u in self.db.d["usuarios"].values():
             if slug in u.get("dono_de", []):
@@ -383,6 +388,18 @@ class PlataformaMixin:
             import urllib.parse
             link = f"{self.PAGES}?api={urllib.parse.quote(url, safe='')}&admin={self.admin_cfg['chave_api']}#/admin"
             return self.tg.send(cid, f"🛡️ <b>Modo plataforma ao vivo</b>\n{E(link)}\n\n⚠️ Este link tem a chave de administrador (lê todas as lojas). Não compartilhe.\nO endereço muda quando o servidor de teste reinicia; peça /admin_conectar de novo.")
+        if cmd == "pro":
+            partes = arg.split()
+            t = self.db.tenant(partes[0]) if partes else None
+            if not t:
+                pros = [x["id"] for x in self.db.d["tenants"].values() if x.get("plano") == "pro"]
+                return self.tg.send(cid, "Use <code>/pro slug</code> para ligar o plano Pro (ou <code>/pro slug off</code>). Pro agora: " + (", ".join(pros) or "nenhuma") + ". Slugs em /lojas.")
+            if len(partes) > 1 and partes[1].lower() in ("off", "nao", "não", "basico", "básico"):
+                t["plano"] = "basico"; (t.get("recursos") or {}).update({"resumo_diario": None})
+                return self.tg.send(cid, f"Plano de <b>{E(t['nome'])}</b> voltou para Básico.")
+            self.pro_ligar(t)
+            self.avisar_donos(t, f"⭐ <b>{E(t['nome'])}</b> agora está no plano <b>Pro</b>: automações ligadas e resumo diário às 19h. Veja /plano")
+            return self.tg.send(cid, f"⭐ Plano Pro ligado para <b>{E(t['nome'])}</b> (<code>{t['id']}</code>).")
         if cmd == "excluir_loja":
             t = self.db.tenant(arg.strip())
             if not t:

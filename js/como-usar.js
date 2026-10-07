@@ -2,12 +2,32 @@
 (function (AT) {
   'use strict';
   const BOT = 'https://t.me/Applojas10_bot';
+  const U = AT.U;
+  // Texto para o Guilherme encaminhar ao lojista (mesmo texto de COMO-USAR.md).
+  const MSG_PRO = "Oi! Montei uma versão Pro do Atende AI para a sua loja virtual: um atendente automático no Telegram que mostra seus produtos, calcula o frete pelo CEP, fecha o pedido e passa a sua chave Pix para o cliente. Leva menos de 3 minutos para deixar no ar:\n\n1. Abra este link no celular: https://t.me/Applojas10_bot?start=pro-lojavirtual\n2. Escreva o nome da loja\n3. Leia o termo do piloto e toque em ✅ Aceito\n4. Escolha o frete e a forma de pagamento nos botões e mande sua chave Pix (ou toque em Pular)\n5. Cole sua lista de produtos, uma linha por produto, assim:\nFone bluetooth; 89,90; 12; 3\n(nome; preço; estoque; dias para despachar). Também dá para colar direto da planilha.\n6. Toque em ✅ Concluir. Ele te dá o link da loja para colocar na bio do Instagram e no WhatsApp (os textos prontos estão em /modelos)\n\nNo dia a dia:\n• Cada pedido chega no seu Telegram com botões: confirmar pagamento → separar → enviar com rastreio\n• O bot nunca cobra nem confirma pagamento sozinho: você confere no banco e toca em Confirmar\n• Ele lembra quem esqueceu o carrinho, pede avaliação depois da entrega e avisa se um envio estiver atrasando\n• Todo dia às 19h chega um resumo (pedidos, pagos, faturamento e o que falta enviar)\n• Ele também anota agenda, lembretes e contas: escreva algo como \"lembrar de postar no Instagram amanhã 10h\"\n\nPara testar como cliente: /cliente (e /dono para voltar). Recursos do plano: /plano.\nÉ um piloto e roda num servidor de teste: se o bot parar de responder, me avisa que eu religo. Qualquer dúvida, me chama!";
   function render(main) {
     main.innerHTML = `
     <div class="guia">
       <div class="cab"><div><div class="olho">Guia rápido</div><h1>Como usar o Atende AI</h1>
         <p>Existe um <strong>bot real de teste</strong> no Telegram, <a href="${BOT}">@Applojas10_bot</a>, com o mesmo motor de regras desta demonstração. Ele funciona sem IA: o Grok entra quando houver créditos.</p></div>
-        <a class="btn btn--tg" href="${BOT}">✈️ Abrir o bot no Telegram</a></div>
+        <div class="linha"><a class="btn btn--tg" href="${BOT}">✈️ Abrir o bot no Telegram</a> <a class="btn" href="#/manual">📘 Manual do lojista</a></div></div>
+
+      <section class="card guia-pro" aria-labelledby="g-pro" id="guia-pro"><h2 id="g-pro">⭐ Guia rápido Pro · Loja virtual em menos de 3 minutos</h2>
+        <p>A versão Pro é <strong>plug and play</strong>: um link só abre um assistente de 4 passos com botões. No fim, a loja já está no ar com modelos de mensagem, políticas e automações ligadas. Funciona sem IA paga.</p>
+        <p><a class="btn btn--tg" href="${BOT}?start=pro-lojavirtual">⭐ Abrir o assistente Pro</a> <code>${BOT.replace('https://', '')}?start=pro-lojavirtual</code></p>
+        <ol>
+          <li><strong>Nome da loja:</strong> escreva, por exemplo, <code>Loja do Mano</code>.</li>
+          <li><strong>Termo do piloto:</strong> leia e toque em <strong>✅ Aceito</strong> (fica registrado com data e hora; “Não aceito” não cria nada).</li>
+          <li><strong>Frete e pagamento:</strong> toque num modelo de frete (grátis acima de R$ 199 · fixo R$ 19,90 · por região) e num de pagamento (Pix 5% + 3x · Pix 10% + 6x · só Pix). Mande a chave Pix ou toque em <strong>Pular</strong>.</li>
+          <li><strong>Produtos:</strong> cole a lista, uma linha por produto: <code>Fone bluetooth; 89,90; 12; 3</code> (nome; preço; estoque; dias para envio), CSV da planilha <code>Cabo USB-C,29.90,50,1</code> ou texto livre <code>Garrafa térmica R$ 59 estoque 20 entrega 2 dias</code>. Sem lista à mão? <strong>🧪 Usar 5 produtos de exemplo</strong>. Toque em <strong>✅ Concluir</strong>.</li>
+        </ol>
+        <p><strong>Já vem ligado:</strong> carrinho abandonado (lembrete ao cliente), pós-venda com avaliação de 1 a 5, alerta de SLA de envio, <strong>resumo diário às 19h</strong> no Telegram do dono, Secretário do dono e modelos de mensagem (<code>/modelos</code>: bio do Instagram, status, resposta automática, Pix pendente, atraso, troca aprovada). Lista completa: <code>/plano</code> · resumo na hora: <code>/resumo</code>.</p>
+        <p class="pequeno muted">O bot nunca cobra nem confirma pagamento sozinho: ele mostra a chave Pix do lojista e o lojista confirma depois de conferir no banco. Plano Pro durante o piloto: sem cobrança. O administrador pode ligar o Pro numa loja existente com <code>/pro slug</code>.</p>
+        <p>Para o lojista ler com calma (e imprimir ou salvar em PDF): <a href="#/manual">📘 Manual do lojista</a>.</p>
+        <h3>Mensagem pronta para encaminhar</h3>
+        <pre class="msg-pronta" id="msg-pro">${U.esc(MSG_PRO)}</pre>
+        <button type="button" class="btn" id="copiar-msg-pro">📋 Copiar mensagem</button> <span class="pequeno muted" id="copiar-ok" role="status"></span>
+      </section>
 
       <section class="card" aria-labelledby="g-dono"><h2 id="g-dono">🧑‍🔧 Para o dono da oficina ou loja</h2>
         <ol>
@@ -62,6 +82,16 @@
         <p>Quer só ver funcionando? Abra a loja de exemplo: <a href="${BOT}?start=loja-exemplo-online">${BOT.replace('https://', '')}?start=loja-exemplo-online</a> (produtos fictícios; não faça pagamento).</p>
       </section>
 
+      <section class="card" aria-labelledby="g-sec" id="secretario"><h2 id="g-sec">🗂️ Secretário do dono</h2>
+        <p>No modo dono, mande vários pedidos numa mensagem só: <code>Agendar reunião com João, pagar conta de luz, lembrar de comprar leite</code>. O bot separa em tarefas, pergunta <strong>só o que falta numa única mensagem</strong> (“dia e hora da reunião; vencimento da conta”) e confirma cada uma com prova (<code>#AG-0001</code>).</p>
+        <ul>
+          <li>Agenda nunca é criada sem dia e hora. Lembrete sem hora vai para hoje às 18h (America/Sao_Paulo) e o bot avisa que usou o padrão.</li>
+          <li>Conta a pagar fica <strong>aguardando seu ok</strong>: só vira paga quando você toca em “Paguei”. O bot não movimenta dinheiro.</li>
+          <li>Lembretes disparam no Telegram na hora, com botões <strong>Feito</strong> e <strong>+1h</strong>. Também entende “ligar pro cliente Ana amanhã 9h” e “repor fone bluetooth 20 unidades”.</li>
+          <li>Comandos: <code>/agenda</code>, <code>/lembretes</code>, <code>/contas</code>. Áudio: o bot pede o texto (não transcreve ainda). Simulação no app: <a href="#/secretario">Secretário</a>.</li>
+        </ul>
+      </section>
+
       <section class="card" aria-labelledby="g-dash"><h2 id="g-dash">🖥️ Ligar este painel aos dados do bot</h2>
         <ol>
           <li>No Telegram, como dono, envie <code>/conectar</code>.</li>
@@ -111,6 +141,13 @@
         <p class="pequeno"><a href="https://github.com/guilhermeromio-netto-prog/atende-ai/blob/main/docs/arquitetura.md">Ver a arquitetura completa</a> · <a href="https://github.com/guilhermeromio-netto-prog/atende-ai/blob/main/COMO-USAR.md">COMO-USAR.md</a></p>
       </section>
     </div>`;
+    const bt = main.querySelector('#copiar-msg-pro');
+    bt.addEventListener('click', () => {
+      const ok = (t) => { main.querySelector('#copiar-ok').textContent = t; };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(MSG_PRO).then(() => ok('Copiado!'), () => ok('Selecione o texto acima e copie.'));
+      else ok('Selecione o texto acima e copie.');
+    });
+    if (AT.irPara) { const alvo = document.getElementById(AT.irPara); AT.irPara = null; if (alvo) setTimeout(() => alvo.scrollIntoView({ block: 'start' }), 30); }
   }
   AT.V = AT.V || {};
   AT.V.comoUsar = { titulo: 'Como usar', render };

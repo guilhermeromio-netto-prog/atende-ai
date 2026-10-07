@@ -52,6 +52,7 @@
           <a class="btn btn--pri" href="#/onboarding">Cadastrar meu negócio pelo chat</a>
           <a class="btn" href="#/dashboard">Ver o painel</a>
         </div>
+        <p class="pequeno" style="margin-top:12px">É lojista ou tem oficina? <a href="#/manual">📘 Leia o Manual do lojista</a> · <a href="https://t.me/Applojas10_bot?start=pro-lojavirtual">⭐ Loja virtual Pro em 3 minutos</a></p>
       </div>
       ${previa(seg)}
     </section>

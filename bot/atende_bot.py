@@ -27,6 +27,10 @@ import motor as M  # noqa: E402
 from ecommerce import EcomMixin  # noqa: E402
 import plataforma as P  # noqa: E402
 from plataforma import PlataformaMixin  # noqa: E402
+import secretario as SEC  # noqa: E402
+from secretario import SecretarioMixin  # noqa: E402
+import pro as PRO  # noqa: E402
+from pro import ProMixin  # noqa: E402
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 DATA = os.environ.get("ATENDE_DATA") or os.path.join(AQUI, "data")
@@ -128,7 +132,7 @@ def novo_tenant(slug, nome, seg, exemplo=True):
             "catalogo": json.loads(json.dumps(sd["catalogo"])) if exemplo else [],
             "automacoes": json.loads(json.dumps(M.DADOS["automacoes"][seg])),
             "sla": json.loads(json.dumps(M.DADOS["sla"][seg])), "metricas": {"carrinhos": 0, "abandonados": 0, "conversas": 0},
-            "piloto": False, "termos": [], **({"politicas": M.politicas_padrao()} if seg == "ecommerce" else {})}
+            "piloto": False, "termos": [], "plano": "basico", **({"politicas": M.politicas_padrao()} if seg == "ecommerce" else {})}
 
 
 def migrar(d):
@@ -146,10 +150,14 @@ def migrar(d):
             t["metricas"] = {"carrinhos": 0, "abandonados": 0}; mudou = True
         if t["segmento"] == "ecommerce" and "politicas" not in t:
             t["politicas"] = M.politicas_padrao(); mudou = True
+        if "plano" not in t:
+            t["plano"] = "basico"; mudou = True
+    if "tarefas" not in d:
+        d["tarefas"] = []; d.setdefault("sec_seq", 0); mudou = True
     if "plataforma" not in d:
         d["plataforma"] = {"admins": [], "tentativas": {}}; mudou = True
-    if d.get("versao", 1) < 3:
-        d["versao"] = 3; mudou = True
+    if d.get("versao", 1) < 5:
+        d["versao"] = 5; mudou = True
     return mudou
 
 
@@ -207,15 +215,18 @@ class IA:
 # ============================================================ Bot
 CMD_CLIENTE = [("start", "Começar o atendimento"), ("trocar", "Escolher outro negócio"), ("nova", "Nova conversa"),
                ("dono", "Sou dono de um negócio"), ("excluir_dados", "Apagar meus dados"), ("ajuda", "Como funciona")]
-CMD_DONO = [("painel", "Resumo e indicadores"), ("pedidos", "Pedidos em aberto"), ("catalogo", "Ver catálogo"),
+CMD_DONO = [("painel", "Resumo e indicadores"), ("resumo", "Resumo do dia"), ("plano", "Seu plano e recursos"), ("modelos", "Mensagens prontas para copiar"), ("manual", "Manual do lojista"), ("missao", "Missão, visão e valores"), ("pedidos", "Pedidos em aberto"), ("catalogo", "Ver catálogo"),
             ("politicas", "Frete, pagamento e trocas (loja virtual)"), ("horario", "Ver horário"), ("link", "Link para seus clientes"), ("conectar", "Ligar o dashboard web"),
             ("codigo", "Código para outro atendente"), ("cliente", "Testar como cliente"), ("dono", "Voltar ao modo dono"),
+            ("agenda", "Secretário: sua agenda"), ("lembretes", "Secretário: lembretes e tarefas"), ("contas", "Secretário: contas a pagar"),
             ("antes", "Piloto: como era antes do bot"), ("excluir_dados", "Apagar dados / pedir exclusão da loja"), ("ajuda", "Comandos")]
+SEC_AJUDA = ("🗂️ <b>Secretário do dono</b>: mande vários pedidos numa mensagem só, ex.: <code>Agendar reunião com João, pagar conta de luz, "
+             "lembrar de comprar leite</code>. Eu separo, pergunto o que falta e confirmo cada um com prova. Contas nunca viram “pagas” sem o seu ok.\n\n")
 ETAPA_TXT = {"problema": "entendendo o problema", "pergunta": "coletando dados", "orcado": "orçamento enviado",
              "agendar": "escolhendo horário", "fim": "agendado", "humano": "com atendente"}
 
 
-class Bot(PlataformaMixin, EcomMixin):
+class Bot(ProMixin, SecretarioMixin, PlataformaMixin, EcomMixin):
     CMD_DONO, CMD_CLIENTE, PAGES = CMD_DONO, CMD_CLIENTE, PAGES
     SEG_TXT = {"oficina": "oficina", "loja": "loja", "ecommerce": "loja virtual"}
 
@@ -292,7 +303,10 @@ class Bot(PlataformaMixin, EcomMixin):
         with self.db.lock:
             try:
                 cid = None
-                if "message" in upd and "text" in upd["message"]:
+                if "message" in upd and any(k in upd["message"] for k in ("voice", "audio", "video_note")) and "text" not in upd["message"]:
+                    cid = upd["message"].get("chat", {}).get("id")
+                    self.on_voz(upd["message"])
+                elif "message" in upd and "text" in upd["message"]:
                     cid = upd["message"].get("chat", {}).get("id")
                     self._msg_id = upd["message"].get("message_id")
                     self.on_mensagem(upd["message"])
@@ -306,6 +320,16 @@ class Bot(PlataformaMixin, EcomMixin):
             finally:
                 self.db.save()
 
+    def on_voz(self, msg):
+        if msg.get("chat", {}).get("type") != "private":
+            return
+        cid = msg["chat"]["id"]; u = self.db.user(cid, msg.get("from"))
+        dono = u.get("modo") == "dono" and u.get("dono_de")
+        ex = ("<code>Agendar reunião com João amanhã 15h, pagar conta de luz dia 12, lembrar de comprar leite</code>" if dono
+              else "o que você precisa, do seu jeito")
+        return self.tg.send(cid, "🎙️ Recebi seu áudio, obrigado! Por enquanto eu ainda não transcrevo áudio (não quero adivinhar o que você disse). "
+                                 f"Pode mandar em texto? Ex.: {ex}")
+
     def on_mensagem(self, msg):
         if msg.get("chat", {}).get("type") != "private":
             return
@@ -316,6 +340,8 @@ class Bot(PlataformaMixin, EcomMixin):
             cmd, _, arg = txt[1:].partition(" ")
             cmd = cmd.split("@")[0].lower()
             return self.comando(cid, u, cmd, arg.strip())
+        if self.pro_ativo(u):
+            return self.pro_texto(cid, u, txt)
         if u.get("aguardando") == "novo_nome":
             return self.criar_negocio_nome(cid, u, txt)
         if u["modo"] == "dono" and u.get("dono_de"):
@@ -329,6 +355,8 @@ class Bot(PlataformaMixin, EcomMixin):
                 return self.cmd_dono(cid, u, "")
             if arg == "admin":
                 return self.cmd_admin(cid, u, "")
+            if arg == PRO.DEEP_LINK:
+                return self.pro_iniciar(cid, u)
             if re.fullmatch(r"ADM[0-9A-F]{12}", arg or ""):
                 return self.cmd_admin(cid, u, arg, self._msg_id)
             if arg and self.db.tenant(arg):
@@ -345,6 +373,10 @@ class Bot(PlataformaMixin, EcomMixin):
             return self.cmd_admin(cid, u, arg, self._msg_id)
         if cmd in [c for c, _ in P.CMD_ADMIN]:
             return self.comando_admin(cid, u, cmd, arg)
+        if cmd == "manual":
+            return self.cmd_manual(cid, u)
+        if cmd in ("missao", "missão"):
+            return self.tg.send(cid, PRO.MISSAO + f"\n\nManual do lojista: {PAGES}#/manual")
         if cmd in ("excluir_dados", "excluirdados", "apagar_dados"):
             return self.cmd_excluir(cid, u)
         if cmd == "privacidade":
@@ -372,6 +404,14 @@ class Bot(PlataformaMixin, EcomMixin):
             return self.exigir_termo(cid, u, {"tipo": "existente", "slug": tenant["id"]})
         if cmd == "antes":
             return self.cmd_antes(cid, tenant, arg)
+        if cmd == "plano":
+            return self.cmd_plano(cid, tenant)
+        if cmd == "resumo":
+            return self.tg.send(cid, self.resumo_texto(tenant))
+        if cmd == "modelos":
+            return self.cmd_modelos(cid, tenant)
+        if cmd in ("agenda", "lembretes", "contas"):
+            return self.sec_listar(cid, tenant, cmd)
         if cmd == "painel":
             return self.cmd_painel(cid, u)
         if cmd == "pedidos":
@@ -406,10 +446,10 @@ class Bot(PlataformaMixin, EcomMixin):
         td = self.db.tenant(u.get("tenant_dono") or (u.get("dono_de") or [""])[0]) if u.get("dono_de") else None
         if td and u["modo"] == "dono" and td["segmento"] == "ecommerce":
             return self.tg.send(cid, "<b>Modo dono · Loja virtual</b>\nEscreva naturalmente:\n• <code>Fone bluetooth R$ 89 estoque 12 entrega 3 dias</code>\n• <code>Frete grátis acima de R$ 199</code>\n• <code>Pix com 5% de desconto, cartão em até 6x</code>\n• <code>Chave pix: sua-chave</code>\n\n" +
-                                "\n".join(f"/{c} — {d}" for c, d in CMD_DONO) + "\n/remover N — remove o produto N")
+                                SEC_AJUDA + "\n".join(f"/{c} — {d}" for c, d in CMD_DONO) + "\n/remover N — remove o produto N")
         if u.get("dono_de") and u["modo"] == "dono":
             return self.tg.send(cid, "<b>Modo dono</b>\nEscreva naturalmente para cadastrar:\n• <code>Troca de óleo R$ 180 1h</code>\n• <code>Pastilha de freio peças R$ 160 a 320 mão de obra R$ 120 1h30</code>\n• <code>Seg a sex 8h às 18h; sábado 8h às 12h</code>\n• <code>Minha oficina se chama Auto Center Silva</code>\n\n" +
-                                "\n".join(f"/{c} — {d}" for c, d in CMD_DONO) + "\n/remover N — remove o item N do catálogo")
+                                SEC_AJUDA + "\n".join(f"/{c} — {d}" for c, d in CMD_DONO) + "\n/remover N — remove o item N do catálogo")
         return self.tg.send(cid, "<b>Como funciona</b>\nConte o problema do seu jeito (ex.: “barulho ao frear”). Eu pergunto o que falta, monto o orçamento com os preços do negócio e você aprova com um toque.\n\n/nova — recomeçar\n/trocar — escolher outro negócio\n/dono — sou dono de um negócio\n/excluir_dados — apagar meus dados\n\n<i>Assistente automático em modo de teste. Os valores são estimativas do catálogo do negócio.</i>")
 
     def escolher_negocio(self, cid, texto):
@@ -546,6 +586,8 @@ class Bot(PlataformaMixin, EcomMixin):
                     tk["respostaHumanaSeg"] = round((M.agora_ms() - tk.get("humanoEm", tk["criado"])) / 1000)
                 self.tg.send(tk["chat_id"], f"👤 <b>{E(t['nome'])}</b> (atendente):\n{E(txt)}")
                 return self.tg.send(cid, f"✉️ Enviado para {E(tk.get('cliente') or 'o cliente')} ({tk['id']}).")
+        if self.sec_tentar(cid, u, t, txt):
+            return
         if t["segmento"] == "ecommerce":
             return self.ecom_texto_dono(cid, u, t, txt)
         res = M.parse_dono(txt, t["segmento"])
@@ -814,6 +856,10 @@ class Bot(PlataformaMixin, EcomMixin):
                         rotulo = b["text"]
         except Exception:
             pass
+        if dado.startswith("sec:"):
+            return self.sec_callback(cid, u, dado)
+        if dado.startswith("pro:"):
+            return self.pro_callback(cid, u, dado)
         if dado in ("termo:ok", "termo:nao"):
             return self.termo_resposta(cid, u, dado == "termo:ok")
         if dado.startswith("exc:"):
@@ -937,6 +983,10 @@ class Bot(PlataformaMixin, EcomMixin):
                             texto = re.sub(r"De 0 a 10[^?]*\?", "Que nota você dá de 1 a 5?", texto)
                         self.tg.send(tk["chat_id"], "🤖 " + E(texto), kb)
             if self.ecom_vigiar_carrinhos(agora):
+                mudou = True
+            if self.sec_vigiar(agora):
+                mudou = True
+            if self.pro_vigiar(agora):
                 mudou = True
             if mudou:
                 self.db.save()
@@ -1079,11 +1129,16 @@ def criar_api(bot: Bot, ia: IA):
                 if not t or not secrets.compare_digest(chave, t["chave_api"]):
                     return self._json(401, {"erro": "negócio ou chave inválidos"})
                 tks = [x for x in bot.db.d["tickets"] if x["tenant"] == t["id"]]
-                neg = {"id": t["id"], "nome": t["nome"], "segmento": t["segmento"], "horario": t["horario"], "link": bot.link(t["id"])}
+                neg = {"id": t["id"], "nome": t["nome"], "segmento": t["segmento"], "horario": t["horario"], "link": bot.link(t["id"]),
+                       "plano": t.get("plano") or "basico", "recursos": t.get("recursos") or {}, "piloto": bool(t.get("piloto"))}
                 if url.path == "/api/pedidos":
                     return self._json(200, {"negocio": neg, "pedidos": [ticket_publico(x) for x in tks]})
                 if url.path == "/api/kpis":
                     return self._json(200, kpis(t, tks))
+                if url.path == "/api/secretario":
+                    tf = sorted([SEC.tarefa_publica(x) for x in bot.db.d.get("tarefas", []) if x["tenant"] == t["id"]], key=lambda x: -x["criado"])
+                    cont = {st: len([x for x in tf if x["status"] == st]) for st in SEC.STATUS}
+                    return self._json(200, {"negocio": neg, "tarefas": tf, "por_status": cont, "geradoEm": M.agora_ms()})
                 if url.path == "/api/catalogo":
                     return self._json(200, {"negocio": neg, "catalogo": t["catalogo"]})
                 if url.path == "/api/export":

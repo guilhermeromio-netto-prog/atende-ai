@@ -5,6 +5,46 @@ Existe um **bot real de teste** no Telegram: **[@Applojas10_bot](https://t.me/Ap
 - App web (demonstração + painel): https://guilhermeromio-netto-prog.github.io/atende-ai/
 - Guia dentro do app: https://guilhermeromio-netto-prog.github.io/atende-ai/#/como-usar
 
+## ⭐ Guia rápido Pro · Loja virtual em menos de 3 minutos
+
+A versão Pro é **plug and play**: um link abre um assistente de 4 passos com botões e, no fim, a loja já está no ar com modelos de mensagem, políticas e automações ligadas. Funciona sem IA paga.
+
+**Link do assistente Pro:** https://t.me/Applojas10_bot?start=pro-lojavirtual
+
+1. **Nome da loja:** escreva, por exemplo, `Loja do Mano`.
+2. **Termo do piloto:** leia e toque em **✅ Aceito** (fica registrado; “Não aceito” não cria nada).
+3. **Frete e pagamento:** toque num modelo de frete (grátis acima de R$ 199 · fixo R$ 19,90 · por região) e num de pagamento (Pix 5% + 3x · Pix 10% + 6x · só Pix). Mande a chave Pix ou toque em **Pular**.
+4. **Produtos:** cole a lista, uma linha por produto: `Fone bluetooth; 89,90; 12; 3` (nome; preço; estoque; dias para envio), CSV da planilha `Cabo USB-C,29.90,50,1` ou texto livre `Garrafa térmica R$ 59 estoque 20 entrega 2 dias`. Sem lista? **🧪 Usar 5 produtos de exemplo**. Toque em **✅ Concluir**.
+
+**Já vem ligado:** carrinho abandonado, pós-venda com avaliação (1 a 5), alerta de SLA de envio, **resumo diário às 19h** no Telegram do dono, Secretário do dono e modelos de mensagem (`/modelos`). Recursos: `/plano` · resumo na hora: `/resumo` · admin liga o Pro numa loja existente: `/pro slug`.
+
+O bot nunca cobra nem confirma pagamento sozinho. Plano Pro durante o piloto: sem cobrança.
+
+### Mensagem pronta para encaminhar ao lojista
+
+```text
+Oi! Montei uma versão Pro do Atende AI para a sua loja virtual: um atendente automático no Telegram que mostra seus produtos, calcula o frete pelo CEP, fecha o pedido e passa a sua chave Pix para o cliente. Leva menos de 3 minutos para deixar no ar:
+
+1. Abra este link no celular: https://t.me/Applojas10_bot?start=pro-lojavirtual
+2. Escreva o nome da loja
+3. Leia o termo do piloto e toque em ✅ Aceito
+4. Escolha o frete e a forma de pagamento nos botões e mande sua chave Pix (ou toque em Pular)
+5. Cole sua lista de produtos, uma linha por produto, assim:
+Fone bluetooth; 89,90; 12; 3
+(nome; preço; estoque; dias para despachar). Também dá para colar direto da planilha.
+6. Toque em ✅ Concluir. Ele te dá o link da loja para colocar na bio do Instagram e no WhatsApp (os textos prontos estão em /modelos)
+
+No dia a dia:
+• Cada pedido chega no seu Telegram com botões: confirmar pagamento → separar → enviar com rastreio
+• O bot nunca cobra nem confirma pagamento sozinho: você confere no banco e toca em Confirmar
+• Ele lembra quem esqueceu o carrinho, pede avaliação depois da entrega e avisa se um envio estiver atrasando
+• Todo dia às 19h chega um resumo (pedidos, pagos, faturamento e o que falta enviar)
+• Ele também anota agenda, lembretes e contas: escreva algo como "lembrar de postar no Instagram amanhã 10h"
+
+Para testar como cliente: /cliente (e /dono para voltar). Recursos do plano: /plano.
+É um piloto e roda num servidor de teste: se o bot parar de responder, me avisa que eu religo. Qualquer dúvida, me chama!
+```
+
 ## Para o dono da oficina ou loja
 
 1. Abra https://t.me/Applojas10_bot?start=dono (ou envie `/dono`).
@@ -32,6 +72,8 @@ Existe um **bot real de teste** no Telegram: **[@Applojas10_bot](https://t.me/Ap
 | `/politicas` | Loja virtual: frete, pagamento, chave Pix e trocas |
 | `/antes` | Piloto: como era antes do bot (resposta, vendas e pedidos por mês) |
 | `/excluir_dados` | Apagar seus dados de cliente ou pedir a exclusão da loja |
+| `/agenda` · `/lembretes` · `/contas` | Secretário do dono: agenda, lembretes e contas a pagar |
+| `/plano` · `/resumo` · `/modelos` | Plano e recursos · resumo do dia · mensagens prontas para copiar |
 
 ## Para o cliente final
 
@@ -43,6 +85,15 @@ Existe um **bot real de teste** no Telegram: **[@Applojas10_bot](https://t.me/Ap
 6. Para apagar seus dados a qualquer momento: `/excluir_dados`.
 
 `/nova` recomeça · `/trocar` escolhe outro negócio · escrever “atendente” chama uma pessoa.
+
+## 🗂️ Secretário do dono
+
+No modo dono, mande vários pedidos numa mensagem só: `Agendar reunião com João, pagar conta de luz, lembrar de comprar leite`. O bot separa em tarefas, pergunta **só o que falta numa única mensagem** e confirma cada uma com prova (`#AG-0001`).
+
+- Agenda nunca é criada sem dia e hora. Lembrete sem hora: hoje às 18h (America/Sao_Paulo), avisando que usou o padrão.
+- Conta a pagar fica **aguardando seu ok** e só vira paga quando você toca em “Paguei”. O bot não movimenta dinheiro.
+- Lembretes disparam no Telegram na hora (botões **Feito** e **+1h**). Entende também “ligar pro cliente Ana amanhã 9h” e “repor fone bluetooth 20 unidades”.
+- `/agenda`, `/lembretes`, `/contas`. Áudio: o bot pede o texto (ainda não transcreve). Spec de origem: [docs/secretario/](docs/secretario/).
 
 ## Ligar o painel web aos dados do bot
 
@@ -97,7 +148,8 @@ O bot mostra produtos, preço e estoque (entende erro de digitação), calcula f
 3. `/lojas`: todas as lojas com segmento, donos, pedidos, faturamento e última atividade (botões para o detalhe). `/loja slug`: indicadores, saúde do piloto, antes × depois e pedidos recentes (sem dados pessoais).
 4. `/piloto slug` marca a loja como piloto (`/piloto slug off` desmarca). Os donos recebem o convite para preencher o “antes”: `/antes resposta 2h vendas R$ 8.000 pedidos 40`.
 5. `/admin_conectar`: link do **Modo plataforma** (https://guilhermeromio-netto-prog.github.io/atende-ai/#/admin) com a chave de administrador, separada das chaves das lojas. Sem a chave, a página mostra dados de demonstração.
-6. `/excluir_loja slug`: exclui a loja e os pedidos dela (pede confirmação). Pedidos de exclusão dos donos chegam com o botão “Excluir agora”.
+6. `/pro slug` liga o plano Pro numa loja existente (`/pro slug off` volta para Básico). Quem entra pelo link Pro já fica no Pro.
+7. `/excluir_loja slug`: exclui a loja e os pedidos dela (pede confirmação). Pedidos de exclusão dos donos chegam com o botão “Excluir agora”.
 
 Playbook do piloto: [docs/piloto.md](docs/piloto.md).
 

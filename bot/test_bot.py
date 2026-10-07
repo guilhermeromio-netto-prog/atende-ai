@@ -1,5 +1,6 @@
 """Teste ponta a ponta do bot com updates simulados (sem rede). Rode: python3 bot/test_bot.py"""
 import json
+import re
 import os
 import sys
 import tempfile
@@ -300,5 +301,163 @@ ok(t2.get("exclusao") and any("Pedido de exclusão de loja" in x for x in textos
 tocar(ADMIN, "Excluir agora")
 ok(not db.tenant(t2["id"]) and not any(x["tenant"] == t2["id"] for x in db.d["tickets"]) and not db.user(DONO2)["dono_de"], "admin excluiu a loja e os pedidos")
 ok("foram excluídos" in textos(DONO2)[-1], "dono avisado da exclusão da loja")
+
+# ===================== Secretário do dono (critérios de aceite da spec)
+import secretario as SEC  # noqa: E402
+from datetime import datetime, timedelta  # noqa: E402
+agora_dt = datetime.now(M.TZ)
+padrao = "hoje às 18h" if agora_dt.hour < 18 else "amanhã às 18h"
+n0 = len(textos(DONO))
+msg(DONO, "Agendar reunião com João, pagar conta de luz, lembrar de comprar leite")
+novas = textos(DONO)[n0:]
+tf = sorted(db.d["tarefas"], key=lambda x: x["id"])[-3:]
+ag, ct, lb = (next(x for x in tf if x["tipo"] == tp) for tp in ("agenda.criar", "financeiro.pagar", "lembrete.criar"))
+ok(novas[0].startswith("📝 <b>Encontrei 3 pedidos:</b>"), "lista numerada 'Encontrei 3 pedidos' antes de executar")
+ok("1. Reunião com João — falta dia e hora." in novas[0] and "2. Conta de luz — falta vencimento." in novas[0] and ("3. Comprar leite — posso lembrar " + padrao) in novas[0], "lista diz o que falta em cada item (copy da spec)")
+ok(len(novas) == 4 and all(("#" + x["id"]) in "".join(novas[1:]) for x in tf), "três pedidos geram três cartões, cada um com prova (#AG/#CT/#LB)")
+ok(sum(1 for x in novas if "numa mensagem só" in x) == 1, "o que falta é perguntado numa mensagem só")
+ok(ag["status"] == "aguardando_dado" and not ag["slots"].get("data") and "inicio" not in ag["slots"], "reunião NÃO é gravada sem data e hora")
+ok(ct["status"] == "aguardando_dado" and not ct.get("pagoEm"), "conta sem vencimento aguarda dado, sem pagar")
+ok(lb["status"] == "executada" and padrao in novas[3] and "horário padrão" in novas[3] and datetime.fromtimestamp(lb["slots"]["quando"] / 1000, M.TZ).hour == 18,
+   "lembrete sem hora usa 18:00 local e declara na confirmação")
+ok(all(re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", x["slots"]["hora"]) for x in db.d["tarefas"] if x["slots"].get("hora")) and not re.search(r"\b\d{1,2}:\d{3}", "".join(novas)), "sem horários inválidos")
+n1 = len(textos(DONO))
+msg(DONO, "João amanhã 15h, luz vence dia 12, leite hoje à noite")
+novas = textos(DONO)[n1:]
+amanha = (agora_dt + timedelta(days=1)).date().isoformat()
+ok(ag["status"] == "executada" and ag["slots"]["data"] == amanha and ag["slots"]["hora"] == "15:00", "resposta numa frase completa a reunião (amanhã 15h) e grava")
+ok(any("tarefa concluída:</b> reunião com joão agendada para amanhã às 15h" in x.lower() and "#" + ag["id"] in x for x in novas), "cartão de sucesso repete o título e cita a prova")
+ok(ct["status"] == "aguardando_ok" and ct["slots"]["vencimento"].endswith("-12") and not ct.get("pagoEm"), "conta de luz registrada em aguardando_ok (nunca paga sozinha)")
+ok(any("espera a sua confirmação" in x and "Não pago nada sem o seu ok" in x for x in novas), "cartão da conta pede o ok explícito")
+ok(datetime.fromtimestamp(lb["slots"]["quando"] / 1000, M.TZ).hour == 20, "lembrete atualizado para 'hoje à noite' (20h)")
+bot.vigiar()
+ok(ct["status"] == "aguardando_ok" and not ct.get("pagoEm"), "vigia não marca conta como paga")
+# lembrete dispara no horário
+lb["disparo"] = M.agora_ms() - 1000; n2 = len(textos(DONO)); bot.vigiar()
+ok(any("⏰ <b>Lembrete:</b> Comprar leite" in x and lb["id"] in x for x in textos(DONO)[n2:]) and lb["disparado"], "lembrete dispara no Telegram na hora")
+n3 = len(textos(DONO)); bot.vigiar()
+ok(len(textos(DONO)) == n3, "lembrete dispara uma vez só")
+tocar(DONO, "+1h")
+ok(not lb["disparado"] and lb["disparo"] > M.agora_ms() + 3500000, "botão +1h reagenda o lembrete")
+# pagamento só com botão
+msg(DONO, "/contas")
+ok("aguardando seu ok" in textos(DONO)[-1] and ct["id"] in textos(DONO)[-1], "/contas lista a conta aguardando ok")
+tocar(DONO, "Paguei " + ct["id"])
+ok(ct["status"] == "executada" and ct.get("pagoEm") and ct["pagoPor"] == DONO, "conta só vira paga pelo botão explícito do dono")
+msg(DONO, "/agenda")
+ok("Reunião com João" in textos(DONO)[-1] and "amanhã às 15h" in textos(DONO)[-1], "/agenda lista a reunião")
+msg(DONO, "/lembretes")
+ok("Comprar leite" in textos(DONO)[-1], "/lembretes lista o lembrete")
+# completo de primeira: executa sem perguntar; sem pessoa: pergunta com quem
+n4 = len(textos(DONO))
+msg(DONO, "Marcar visita com Dona Maria amanhã às 10h")
+ok("numa mensagem só" not in textos(DONO)[n4] and db.d["tarefas"][-1]["status"] == "executada", "pedido completo é executado sem perguntas")
+msg(DONO, "agendar reunião amanhã 10h")
+ok(db.d["tarefas"][-1]["status"] == "aguardando_dado" and db.d["tarefas"][-1]["falta"] == ["pessoa"] and "com quem" in textos(DONO)[-2], "não inventa pessoa: pergunta com quem")
+tocar(DONO, "Cancelar")
+ok(db.d["tarefas"][-1]["status"] == "cancelada", "tarefa pode ser cancelada")
+# intenções do negócio
+msg(DONO, "ligar pro cliente Ana amanhã 9h, repor pastilha de freio 10 unidades")
+lg, rp = db.d["tarefas"][-2], db.d["tarefas"][-1]
+ok(lg["tipo"] == "cliente.ligar" and lg["slots"]["pessoa"] == "Ana" and rp["tipo"] == "estoque.repor" and rp["slots"]["quantidade"] == 10, "intenções do negócio: ligar pro cliente e repor estoque")
+# cadastro de catálogo continua funcionando
+msg(DONO, "Visita técnica R$ 100 1h")
+ok(any(c["nome"] == "Visita técnica" for c in t["catalogo"]), "cadastro de catálogo não é confundido com pedido ao secretário")
+# cliente não aciona o secretário
+nt = len(db.d["tarefas"]); msg(CLI5, "lembrar de comprar leite")
+ok(len(db.d["tarefas"]) == nt, "mensagem de cliente não cria tarefa do secretário")
+# áudio
+uid[0] += 1; bot.processar({"update_id": uid[0], "message": {"message_id": uid[0], "chat": {"id": DONO, "type": "private"}, "from": {"first_name": "x"}, "voice": {"file_id": "abc", "duration": 4}}})
+ok("Pode mandar em texto" in textos(DONO)[-1] and len(db.d["tarefas"]) == nt, "áudio: pede texto com educação, sem fingir transcrição")
+# API
+try:
+    urllib.request.urlopen(base + "/api/secretario?negocio=oficina-pista-livre&chave=errada"); ok(False, "deveria recusar")
+except urllib.error.HTTPError as e:
+    ok(e.code == 401, "API /api/secretario exige a chave da loja")
+sd = json.load(urllib.request.urlopen(urllib.request.Request(base + "/api/secretario?negocio=oficina-pista-livre", headers={"X-Atende-Chave": t["chave_api"]})))
+ok(sd["por_status"]["executada"] >= 3 and sd["por_status"]["cancelada"] == 1 and all("chat" not in x for x in sd["tarefas"]), "API /api/secretario lista tarefas por status (sem chat_id)")
+
+# ============================================================ versão Pro (plug and play)
+print("\n— versão Pro —")
+PROD, PCLI = 1201, 1202
+msg(PROD, "/start pro-lojavirtual")
+ok("Passo 1/4" in textos(PROD)[-1] and "menos de 3 minutos" in textos(PROD)[-1], "Pro: o link abre o assistente no passo 1 (nome)")
+msg(PROD, "Loja do Mano Pro")
+ok("Passo 2/4" in textos(PROD)[-2] and "Termo de uso do piloto" in textos(PROD)[-1], "Pro: passo 2 mostra o termo do piloto")
+ok(not any(x["nome"] == "Loja do Mano Pro" for x in db.d["tenants"].values()), "Pro: nada é criado antes do aceite")
+tocar(PROD, "Aceito")
+tm = next(x for x in db.d["tenants"].values() if x["nome"] == "Loja do Mano Pro")
+ok(tm["plano"] == "pro" and tm["segmento"] == "ecommerce" and PROD in tm["donos"] and tm["termos"] and all(a["ativo"] for a in tm["automacoes"]) and not tm["catalogo"],
+   "Pro: aceite cria a loja virtual Pro, vazia, com automações ligadas")
+ok(tm["recursos"]["resumo_diario"] == "19:00" and tm["recursos"]["carrinho_abandonado"] and tm["recursos"]["posvenda"] and tm["recursos"]["alerta_sla"] and len(tm["modelos"]) >= 5,
+   "Pro: recursos (carrinho, pós-venda, SLA, resumo 19h) e modelos de mensagem prontos")
+ok("Passo 3/4" in textos(PROD)[-1], "Pro: segue direto para frete")
+tocar(PROD, "Grátis acima de R$ 199"); tocar(PROD, "Pix 10% off")
+msg(PROD, "Chave pix: mano.pro@email.com")
+pol = tm["politicas"]
+ok(pol["frete"]["tipo"] == "fixo" and pol["frete"]["gratisAcima"] == 199 and pol["pagamento"]["pixDescontoPct"] == 10 and pol["pagamento"]["parcelas"] == 6 and pol["pagamento"]["pixChave"] == "mano.pro@email.com",
+   "Pro: presets de frete/pagamento e chave Pix aplicados")
+ok("Passo 4/4" in textos(PROD)[-1], "Pro: passo 4 pede a lista de produtos")
+msg(PROD, "Fone bluetooth; 89,90; 12; 3\nGarrafa térmica R$ 59 estoque 20 entrega 2 dias\nCabo USB-C,29.90,50,1\nxyz sem preço")
+nomes = {c["nome"]: c for c in tm["catalogo"]}
+ok(len(tm["catalogo"]) == 3 and nomes["Fone bluetooth"]["preco"] == 89.9 and nomes["Fone bluetooth"]["estoque"] == 12 and nomes["Cabo USB-C"]["envioDias"] == 1 and nomes["Garrafa térmica"]["estoque"] == 20,
+   "Pro: importa lista em ‘;’, CSV e texto livre (3 produtos)")
+ok("Não entendi" in textos(PROD)[-1] and "xyz sem preço" in textos(PROD)[-1], "Pro: avisa a linha que não entendeu")
+tocar(PROD, "Concluir")
+fim = textos(PROD)[-2]
+bv = textos(PROD)[-1]
+ok("Seja bem-vindo" in bv and "#/manual" in bv and "Piloto fundador" in bv and "/missao" in bv and "Primeiros 3 passos" in bv, "Pro: ao concluir chega o ‘Seja bem-vindo’ com manual, piloto fundador e 3 passos")
+ok("está no ar" in fim and tm["proDuracaoSeg"] < 180 and bot.link(tm["id"]) in fim and "resumo diário às 19h" in fim, "Pro: loja pronta em menos de 3 min, com link e automações")
+ok(not db.user(PROD).get("pro") and db.user(PROD)["modo"] == "dono", "Pro: assistente encerrado, dono no modo dono")
+msg(PROD, "/manual")
+ok("Seja bem-vindo" in textos(PROD)[-1] and "/cliente" in textos(PROD)[-1], "/manual reenvia as boas-vindas do dono")
+msg(PROD, "/missao")
+ok("Missão" in textos(PROD)[-1] and "versão 1" in textos(PROD)[-1] and "Humano no controle" in textos(PROD)[-1], "/missao mostra missão, visão e valores (versão 1)")
+msg(PCLI, "/manual")
+ok("Seja bem-vindo" in textos(PCLI)[-1] and "pro-lojavirtual" in textos(PCLI)[-1], "/manual para quem ainda não tem loja aponta o link Pro")
+msg(PROD, "/plano")
+ok("Plano Pro" in textos(PROD)[-1] and "Resumo diário às 19h" in textos(PROD)[-1] and "Secretário" in textos(PROD)[-1], "/plano lista os recursos do Pro")
+msg(PROD, "/modelos")
+ok(bot.link(tm["id"]) in textos(PROD)[-1] and "mano.pro@email.com" in textos(PROD)[-1], "/modelos traz textos prontos com link e chave Pix")
+msg(DONO, "/plano")
+ok("Plano Básico" in textos(DONO)[-1], "loja comum continua no plano Básico")
+# cliente compra na loja Pro
+msg(PCLI, "/start " + tm["id"]); msg(PCLI, "quero um fone")
+ok("Adicionei 1x Fone bluetooth" in textos(PCLI)[-1], "Pro: cliente acha produto importado (busca)"); tocar(PCLI, "Fechar pedido")
+msg(PCLI, "Ana Souza"); msg(PCLI, "01310-100"); msg(PCLI, "Rua A 10"); tocar(PCLI, "pg:pix"); tocar(PCLI, "Confirmar pedido")
+pp = next(x for x in db.d["tickets"] if x["tenant"] == tm["id"])
+ok(pp["tenant"] == tm["id"] and pp["status"] == "Aguardando pagamento" and any("mano.pro@email.com" in x for x in textos(PCLI)), "Pro: cliente fecha pedido e recebe a chave Pix")
+tocar(PROD, "Confirmar pagamento")
+ok(pp["status"] == "Pago", "Pro: dono confirma o pagamento pelo botão")
+# resumo diário às 19h
+from datetime import datetime as _dt
+hoje = _dt.now(M.TZ)
+h18 = int(hoje.replace(hour=18, minute=0, second=0, microsecond=0).timestamp() * 1000)
+h19 = int(hoje.replace(hour=19, minute=5, second=0, microsecond=0).timestamp() * 1000)
+tm["resumoEnviadoEm"] = None
+for x in db.d["tenants"].values():
+    if x["id"] != tm["id"]:
+        x["resumoEnviadoEm"] = hoje.strftime("%Y-%m-%d")
+n = len(textos(PROD)); nd = len(textos(DONO))
+bot.pro_vigiar(h18)
+ok(len(textos(PROD)) == n, "resumo diário não sai antes das 19h")
+bot.pro_vigiar(h19)
+rs = textos(PROD)[-1]
+ok(len(textos(PROD)) == n + 1 and "Resumo do dia" in rs and "pagos hoje: <b>1</b>" in rs and "R$ 100,81" in rs and "Para separar/enviar: <b>1</b>" in rs, "resumo diário às 19h com pedidos, pagos e faturamento do dia")
+bot.pro_vigiar(h19 + 600000)
+ok(len(textos(PROD)) == n + 1 and len(textos(DONO)) == nd, "resumo sai uma vez por dia e só para lojas Pro")
+msg(PROD, "/resumo")
+ok("Resumo do dia" in textos(PROD)[-1], "/resumo sob demanda")
+# admin liga/desliga Pro
+msg(ATAQ, "/pro casa-forte")
+ok("Acesso negado" in textos(ATAQ)[-1] and db.d["tenants"]["casa-forte"]["plano"] != "pro", "/pro negado para quem não é admin")
+msg(ADMIN, "/pro casa-forte")
+ok(db.d["tenants"]["casa-forte"]["plano"] == "pro", "admin liga o Pro com /pro slug")
+msg(ADMIN, "/pro casa-forte off")
+ok(db.d["tenants"]["casa-forte"]["plano"] == "basico", "admin volta para Básico com /pro slug off")
+pn = json.load(urllib.request.urlopen(urllib.request.Request(base + "/api/pedidos?negocio=" + tm["id"], headers={"X-Atende-Chave": tm["chave_api"]})))
+ok(pn["negocio"]["plano"] == "pro" and pn["negocio"]["recursos"]["resumo_diario"] == "19:00", "API do negócio informa o plano Pro (selo no dashboard)")
+la = json.load(urllib.request.urlopen(urllib.request.Request(base + "/api/admin/lojas", headers={"X-Atende-Admin": bot.admin_cfg["chave_api"]})))
+ok(any(x["id"] == tm["id"] and x["plano"] == "pro" for x in la["lojas"]), "API admin mostra o plano de cada loja")
 srv.shutdown()
 print("\nTodos os testes passaram.")

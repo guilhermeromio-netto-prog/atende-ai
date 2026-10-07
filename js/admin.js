@@ -36,7 +36,7 @@
     let semente = 7;
     const rnd = () => { semente = (semente * 9301 + 49297) % 233280; return semente / 233280; };
     const base = [
-      { id: 'loja-do-mano', nome: 'Loja do Mano', segmento: 'ecommerce', piloto: true, donos: 1, dias: 18, conv: 214, ped: 61, cvt: 37, fat: 9480, resp: 2, nps: [41, 12], antes: { respostaMin: 150, vendasMes: 7200, pedidosMes: 28 } },
+      { id: 'loja-do-mano', nome: 'Loja do Mano', segmento: 'ecommerce', piloto: true, plano: 'pro', donos: 1, dias: 18, conv: 214, ped: 61, cvt: 37, fat: 9480, resp: 2, nps: [41, 12], antes: { respostaMin: 150, vendasMes: 7200, pedidosMes: 28 } },
       { id: 'auto-center-silva', nome: 'Auto Center Silva', segmento: 'oficina', piloto: true, donos: 2, dias: 25, conv: 168, ped: 74, cvt: 49, fat: 31650, resp: 3, nps: [33, 8], antes: { respostaMin: 95, vendasMes: 26800, pedidosMes: 52 } },
       { id: 'bella-moda-online', nome: 'Bella Moda Online', segmento: 'ecommerce', piloto: false, donos: 1, dias: 9, conv: 96, ped: 22, cvt: 11, fat: 2310, resp: 2, nps: [8, 3], antes: {} },
       { id: 'casa-forte', nome: 'Casa Forte Materiais', segmento: 'loja', piloto: false, donos: 1, dias: 30, conv: 131, ped: 58, cvt: 31, fat: 14920, resp: 4, nps: [19, 6], antes: {} },
@@ -60,7 +60,7 @@
       const n = b.nps[0] + b.nps[1];
       const nps = n ? { n, nps: Math.round(((b.nps[0] * 0.75) - b.nps[1] * 0.5) / n * 100), media: Math.round((4.2 + rnd() * 0.6) * 10) / 10 } : { n: 0, nps: null, media: null };
       const ult = Object.keys(atividade).sort().pop();
-      return { id: b.id, nome: b.nome, segmento: b.segmento, exemplo: !!b.exemplo, piloto: b.piloto, donos: b.donos, criado: agora - b.dias * DIA, conversas: b.conv, pedidos: b.ped, convertidos: b.cvt,
+      return { id: b.id, nome: b.nome, segmento: b.segmento, exemplo: !!b.exemplo, piloto: b.piloto, plano: b.plano || 'basico', donos: b.donos, criado: agora - b.dias * DIA, conversas: b.conv, pedidos: b.ped, convertidos: b.cvt,
         conversao: b.conv ? Math.round(b.cvt / b.conv * 100) : null, faturamento: b.fat, tempoRespostaSeg: b.resp, ultimaAtividade: ult ? new Date(ult + 'T12:00:00').getTime() + Math.round(rnd() * 5 * 3600000) : agora - 12 * DIA,
         termoAceitoEm: b.exemplo || !b.donos ? null : agora - b.dias * DIA, exclusaoSolicitadaEm: null, nps,
         saude: { piloto: b.piloto, inicio: agora - Math.min(b.dias, 21) * DIA, dias: Math.min(b.dias, 21), dias_ativos: Object.keys(atividade).filter((k) => k >= new Date(agora - Math.min(b.dias, 21) * DIA).toISOString().slice(0, 10)).length,
@@ -103,7 +103,7 @@
     const ord = lojas.slice().sort((a, b) => (b.piloto - a.piloto) || (b.ultimaAtividade - a.ultimaAtividade));
     return '<div class="tabela-wrap"><table class="adm-tab"><caption class="sr">Todas as lojas da plataforma</caption><thead><tr><th scope="col">Loja</th><th scope="col">Segmento</th><th scope="col" class="num">Donos</th><th scope="col" class="num">Conversas</th><th scope="col" class="num">Pedidos</th><th scope="col" class="num">Conversão</th><th scope="col" class="num">Faturamento</th><th scope="col">Última atividade</th><th scope="col"><span class="sr">Ações</span></th></tr></thead><tbody>' +
       ord.map((l) => '<tr' + (l.id === sel ? ' aria-current="true" class="sel"' : '') + '><th scope="row"><strong>' + U.esc(l.nome) + '</strong><div class="pequeno muted"><code>' + U.esc(l.id) + '</code>' +
-        (l.piloto ? ' <span class="chip chip--azul">🧪 piloto</span>' : '') + (l.exemplo ? ' <span class="chip chip--exemplo">exemplo</span>' : '') + (l.exclusaoSolicitadaEm ? ' <span class="chip chip--erro">exclusão pedida</span>' : '') + '</div></th>' +
+        (l.plano === 'pro' ? ' <span class="chip chip--pro">⭐ Pro</span>' : '') + (l.piloto ? ' <span class="chip chip--azul">🧪 piloto</span>' : '') + (l.exemplo ? ' <span class="chip chip--exemplo">exemplo</span>' : '') + (l.exclusaoSolicitadaEm ? ' <span class="chip chip--erro">exclusão pedida</span>' : '') + '</div></th>' +
         '<td>' + seg(l.segmento).join(' ') + '</td><td class="num">' + l.donos + '</td><td class="num">' + l.conversas + '</td><td class="num">' + l.pedidos + '</td><td class="num">' + pct(l.conversao) + '</td><td class="num">' + din(l.faturamento) + '</td>' +
         '<td>' + U.dataHora(l.ultimaAtividade) + (Date.now() - l.ultimaAtividade > 7 * DIA ? ' <span class="chip chip--atencao">parada</span>' : '') + '</td>' +
         '<td><a class="btn btn--p" href="#/admin/' + encodeURIComponent(l.id) + '" aria-label="Ver detalhes de ' + U.esc(l.nome) + '">Ver</a></td></tr>').join('') + '</tbody></table></div>';
@@ -121,7 +121,7 @@
     const s = l.saude || {}; const a = s.antes || {}; const d = s.depois || {};
     const ganhoResp = a.respostaMin != null && d.respostaBotSeg != null ? Math.round((a.respostaMin * 60) / Math.max(1, d.respostaBotSeg)) : null;
     const ganhoVendas = a.vendasMes ? Math.round((d.vendas30d - a.vendasMes) / a.vendasMes * 100) : null;
-    return '<section class="card adm-det" aria-labelledby="adm-det-t" id="adm-det"><div class="cab cab--p"><div><div class="olho">' + seg(l.segmento).join(' ') + (l.piloto ? ' · 🧪 piloto' : '') + '</div><h2 id="adm-det-t">' + U.esc(l.nome) + '</h2>' +
+    return '<section class="card adm-det" aria-labelledby="adm-det-t" id="adm-det"><div class="cab cab--p"><div><div class="olho">' + seg(l.segmento).join(' ') + (l.plano === 'pro' ? ' · ⭐ Pro' : '') + (l.piloto ? ' · 🧪 piloto' : '') + '</div><h2 id="adm-det-t">' + U.esc(l.nome) + '</h2>' +
       '<p class="pequeno">Slug <code>' + U.esc(l.id) + '</code> · criada ' + U.dataCurta(l.criado || Date.now()) + ' · donos: ' + l.donos + ' · termo do piloto: ' + (l.termoAceitoEm ? 'aceito em ' + U.dataHora(l.termoAceitoEm) : 'não aceito') + '</p></div>' +
       '<a class="btn btn--p" href="#/admin">Fechar</a></div>' +
       '<div class="kpis">' + kpi('Conversas', l.conversas, 'clientes que falaram com o bot') + kpi('Pedidos', l.pedidos, l.convertidos + ' convertidos · ' + pct(l.conversao)) + kpi('Faturamento', din(l.faturamento), l.segmento === 'ecommerce' ? 'pedidos pagos' : 'serviços entregues') + kpi('1ª resposta', resp(l.tempoRespostaSeg), 'média do bot') + '</div>' +
@@ -131,7 +131,7 @@
       '<tr><th scope="row">Tempo para responder um cliente</th><td>' + (a.respostaMin != null ? U.dur(a.respostaMin) : '<span class="muted">não informado</span>') + '</td><td>' + resp(d.respostaBotSeg) + ' (bot) · ' + (d.respostaHumanaMin != null ? dec(d.respostaHumanaMin) + ' min (equipe, quando chamada)' : 'equipe: —') + (ganhoResp ? ' <span class="chip chip--ok">' + ganhoResp + '× mais rápido</span>' : '') + '</td></tr>' +
       '<tr><th scope="row">Vendas por mês</th><td>' + (a.vendasMes != null ? din(a.vendasMes) : '<span class="muted">não informado</span>') + '</td><td>' + din(d.vendas30d) + ' (últimos 30 dias)' + (ganhoVendas != null ? ' <span class="chip ' + (ganhoVendas >= 0 ? 'chip--ok' : 'chip--atencao') + '">' + (ganhoVendas >= 0 ? '+' : '') + ganhoVendas + '%</span>' : '') + '</td></tr>' +
       '<tr><th scope="row">Pedidos por mês</th><td>' + (a.pedidosMes != null ? a.pedidosMes : '<span class="muted">não informado</span>') + '</td><td>' + (d.pedidos30d || 0) + ' (últimos 30 dias)</td></tr></tbody></table></div>' +
-      '<p class="pequeno muted">O dono preenche o “antes” no bot com <code>/antes resposta 2h vendas R$ 8.000 pedidos 40</code>. Marcar como piloto: <code>/piloto ' + U.esc(l.id) + '</code>.</p>' +
+      '<p class="pequeno muted">O dono preenche o “antes” no bot com <code>/antes resposta 2h vendas R$ 8.000 pedidos 40</code>. Marcar como piloto: <code>/piloto ' + U.esc(l.id) + '</code> · plano Pro: <code>/pro ' + U.esc(l.id) + '</code>.</p>' +
       '<h3>Pedidos recentes</h3>' + ((l.recentes || []).length ? '<div class="tabela-wrap"><table><caption class="sr">Pedidos recentes, sem dados pessoais</caption><thead><tr><th scope="col">Pedido</th><th scope="col">Tipo</th><th scope="col">Status</th><th scope="col" class="num">Valor</th><th scope="col">Aberto</th><th scope="col">SLA</th></tr></thead><tbody>' +
         l.recentes.map((t) => '<tr><th scope="row">' + U.esc(t.id) + '</th><td>' + U.esc(t.tipo) + (t.humano ? ' · 🙋' : '') + '</td><td>' + U.esc(t.status) + '</td><td class="num">' + (t.valor ? din(t.valor) : '—') + '</td><td>' + U.dataHora(t.criado) + '</td><td><span class="chip chip--' + (t.sla === 'erro' ? 'erro' : t.sla === 'atencao' ? 'atencao' : 'ok') + '">' + ({ ok: 'no prazo', atencao: 'atenção', erro: 'estourado' }[t.sla] || t.sla) + '</span></td></tr>').join('') + '</tbody></table></div>' : '<p class="muted">Nenhum pedido ainda.</p>') +
       '<p class="pequeno muted">Minimização de dados (LGPD): o operador da plataforma vê números, status e valores. Nomes, contatos, endereços e mensagens dos clientes ficam só com a loja.</p></section>';
@@ -139,8 +139,8 @@
 
   function csv() {
     const q = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
-    const cab = ['loja', 'slug', 'segmento', 'exemplo', 'piloto', 'donos', 'conversas', 'pedidos', 'convertidos', 'conversao_pct', 'faturamento', 'primeira_resposta_seg', 'ultima_atividade', 'termo_aceito_em', 'piloto_inicio', 'dias_ativos', 'mensagens_dia', 'nps', 'antes_resposta_min', 'antes_vendas_mes', 'antes_pedidos_mes', 'depois_vendas_30d', 'depois_pedidos_30d'];
-    const linhas = A.dados.lojas.map((l) => { const s = l.saude || {}; const a = s.antes || {}; const d = s.depois || {}; return [l.nome, l.id, l.segmento, l.exemplo ? 'sim' : 'não', l.piloto ? 'sim' : 'não', l.donos, l.conversas, l.pedidos, l.convertidos, l.conversao, String(l.faturamento).replace('.', ','), l.tempoRespostaSeg,
+    const cab = ['loja', 'slug', 'segmento', 'exemplo', 'piloto', 'plano', 'donos', 'conversas', 'pedidos', 'convertidos', 'conversao_pct', 'faturamento', 'primeira_resposta_seg', 'ultima_atividade', 'termo_aceito_em', 'piloto_inicio', 'dias_ativos', 'mensagens_dia', 'nps', 'antes_resposta_min', 'antes_vendas_mes', 'antes_pedidos_mes', 'depois_vendas_30d', 'depois_pedidos_30d'];
+    const linhas = A.dados.lojas.map((l) => { const s = l.saude || {}; const a = s.antes || {}; const d = s.depois || {}; return [l.nome, l.id, l.segmento, l.exemplo ? 'sim' : 'não', l.piloto ? 'sim' : 'não', l.plano || 'basico', l.donos, l.conversas, l.pedidos, l.convertidos, l.conversao, String(l.faturamento).replace('.', ','), l.tempoRespostaSeg,
       new Date(l.ultimaAtividade).toLocaleString('pt-BR'), l.termoAceitoEm ? new Date(l.termoAceitoEm).toLocaleString('pt-BR') : '', s.inicio ? new Date(s.inicio).toLocaleDateString('pt-BR') : '', s.dias_ativos, String(s.mensagens_dia == null ? '' : s.mensagens_dia).replace('.', ','), s.nps ? s.nps.nps : '', a.respostaMin, a.vendasMes, a.pedidosMes, d.vendas30d, d.pedidos30d].map(q).join(';'); });
     U.baixar('atende-ai-plataforma-lojas' + (A.dados.demo ? '-demonstracao' : '') + '.csv', '\ufeff' + cab.join(';') + '\n' + linhas.join('\n'), 'text/csv;charset=utf-8');
     U.toast('CSV exportado (' + linhas.length + ' lojas' + (A.dados.demo ? ', dados de demonstração' : '') + ').');
@@ -178,11 +178,21 @@
       </form>
       <section aria-label="Indicadores globais"><div class="kpis" id="adm-kpis"></div></section>
       <section class="card" aria-labelledby="adm-lojas-t"><h2 id="adm-lojas-t">Lojas</h2><div id="adm-lojas"></div></section>
-      <div id="adm-det-raiz"></div>`;
+      <div id="adm-det-raiz"></div>
+      <details class="card adm-playbook" id="adm-playbook"><summary><strong>📘 Playbook de escala</strong> <span class="chip chip--exemplo">interno · para o Guilherme</span></summary>
+        <p class="pequeno muted">Do piloto ao case, pitch, roteiro de demo, onboarding padrão, hipóteses de planos e checklist. Fonte: <a href="${AT.Doc.REPO}PLAYBOOK-ESCALA.md">docs/PLAYBOOK-ESCALA.md</a> (o repositório é público: não coloque aqui nada sigiloso).</p>
+        <div class="doc" id="adm-playbook-doc"><p class="muted">Abra para carregar…</p></div>
+      </details>`;
     if (!A.dados || A.vivo !== !!conexao() || (conexao() && A.erro)) await atualizar();
     desenhar(main, slug);
     if (slug) { const d = main.querySelector('#adm-det'); if (d) d.scrollIntoView({ block: 'start', behavior: U.reduzMov() ? 'auto' : 'smooth' }); }
     main.querySelector('#adm-csv').addEventListener('click', csv);
+    const pb = main.querySelector('#adm-playbook');
+    pb.addEventListener('toggle', async () => {
+      if (!pb.open || pb.dataset.ok) return;
+      const alvo = main.querySelector('#adm-playbook-doc');
+      try { alvo.innerHTML = AT.Doc.md(await AT.Doc.carregar('PLAYBOOK-ESCALA.md'), 1).html; pb.dataset.ok = '1'; } catch (e) { alvo.innerHTML = '<p>Não consegui carregar (' + U.esc(e.message) + '). <a href="' + AT.Doc.REPO + 'PLAYBOOK-ESCALA.md">Abrir no GitHub</a>.</p>'; }
+    });
     main.querySelector('#adm-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       localStorage.setItem(CHAVE, JSON.stringify({ api: main.querySelector('#adm-api').value.trim().replace(/\/+$/, ''), chave: main.querySelector('#adm-chave').value.trim() }));

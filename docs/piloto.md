@@ -11,12 +11,12 @@ Provar, com dados de uma loja real, que o Atende AI:
 3. transforma conversa em pedido pago;
 4. economiza tempo do dono, e que ele continuaria usando (e pagaria).
 
-## 2. Colocar o irmão no piloto (dia 0, cerca de 1 hora)
+## 2. Colocar o irmão no piloto (dia 0, cerca de 15 minutos)
 
 | Quem | Passo |
 |---|---|
-| Irmão | Abre https://t.me/Applojas10_bot?start=dono → **Criar meu negócio do zero** → nome da loja → **🛒 Loja virtual (catálogo vazio)** → lê o termo do piloto → **✅ Aceito** |
-| Irmão | Cadastra 10 a 30 produtos (`Fone bluetooth R$ 89 estoque 12 entrega 3 dias`), as políticas (`Frete grátis acima de R$ 199`, `Pix com 5% de desconto, cartão em até 6x`, `Chave pix: …`) e confere com `/catalogo` e `/politicas` |
+| Irmão | Abre o link Pro https://t.me/Applojas10_bot?start=pro-lojavirtual → nome da loja → lê o termo do piloto → **✅ Aceito** → escolhe frete e pagamento nos botões (+ chave Pix) → cola a lista de produtos → **✅ Concluir** (menos de 3 minutos; loja já no plano Pro, com automações e resumo às 19h) |
+| Irmão | Recebe o “Seja bem-vindo” e o [Manual do lojista](https://guilhermeromio-netto-prog.github.io/atende-ai/#/manual); confere `/catalogo` e `/politicas` e ajusta escrevendo (`Fone bluetooth R$ 89 estoque 12 entrega 3 dias`) |
 | Irmão | Testa como cliente com `/cliente` (busca, carrinho, CEP, Pix, “Já paguei”) e volta com `/dono` |
 | Guilherme | Vira admin (`/admin SEU_CÓDIGO`), acha o slug da loja em `/lojas` e marca: `/piloto <slug>` |
 | Irmão | Recebe o convite e preenche o **antes**: `/antes resposta 2h vendas R$ 8.000 pedidos 40` |
@@ -96,3 +96,6 @@ Validar com 5 a 10 lojas parecidas antes de fixar. Perguntas: “a partir de que
 - **Pagamento real:** link de pagamento com confirmação automática por webhook (Mercado Pago/Stripe) e cotação de frete.
 - **Contrato:** termo de uso, política de privacidade e contrato de operador de dados (LGPD) revisados por advogado ([privacidade.md](privacidade.md) é só o resumo do piloto).
 - **Suporte:** canal e prazo de resposta definidos.
+
+
+Para transformar o piloto em case e escalar para outros lojistas: [PLAYBOOK-ESCALA.md](PLAYBOOK-ESCALA.md).
