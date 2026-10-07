@@ -15,6 +15,8 @@ Protótipo de produto para **oficinas mecânicas, lojas e lojas virtuais**: o cl
 | `#/atendimento` | Visão do cliente final no Telegram: sintoma → perguntas (nome, modelo, placa, urgência) → orçamento itemizado → Aprovar/Falar com atendente → agendamento. Abre o pedido |
 | `#/pedidos` | Kanban/lista (Novo → Orçado → Aprovado → Em serviço → Pronto → Entregue), SLA colorido, gaveta com conversa e cadeia de automações, "Simular avanço" |
 | `#/dashboard` | KPIs, atendimentos por dia, funil, serviços mais pedidos, situação do SLA, pedidos em risco, filtros e exportação CSV |
+| `#/admin` | Modo plataforma (dono da plataforma): todas as lojas, KPIs globais, detalhe por loja, saúde do piloto, antes × depois, CSV. Dados reais só com a chave de administrador; sem ela, demonstração |
+| `#/privacidade` | Privacidade e termo de uso do piloto (LGPD) |
 | `#/config` | Modelos de mensagem com `{cliente}` `{servico}` `{prazo}`…, SLA por prioridade, canais, exportar/importar/restaurar dados |
 
 ## Estrutura
@@ -28,6 +30,8 @@ js/motor.js             orçamento, SLA, automações, parser do cadastro, inten
 js/conversa.js          motor de conversa do cliente (independente de canal)
 js/ecommerce.js         loja virtual: busca tolerante a erros, frete por CEP, carrinho, políticas, parser do lojista
 js/conversa-ecom.js     conversa do cliente da loja virtual (carrinho → pagamento do lojista → rastreio/troca)
+js/admin.js             Modo plataforma (#/admin): lê /api/admin/export com a chave de administrador
+js/privacidade.js       página de privacidade e termo do piloto
 js/canais/base.js       núcleo de renderização de conversa
 js/canais/telegram.js   adaptador Telegram (principal)
 js/canais/whatsapp.js   adaptador WhatsApp (em breve)
@@ -41,6 +45,12 @@ COMO-USAR.md            guia para donos e clientes finais
 ## Loja virtual (🛒)
 
 Terceiro segmento, no mesmo motor e no mesmo `dados.json` do bot e do site: produtos com preço/estoque/prazo de envio, políticas de frete (grátis acima de, fixo ou tabela por região do CEP), Pix com desconto, parcelas, chave Pix/link do lojista (nunca simula pagamento), troca (CDC 7 dias). Pipeline: Novo → Aguardando pagamento → Pago → Separando → Enviado (rastreio) → Entregue, com trocas/atendimento em coluna própria. KPIs: pedidos, faturamento, ticket médio, conversão carrinho → pago, carrinhos abandonados, envio no prazo, trocas. Passo a passo em [COMO-USAR.md](COMO-USAR.md#-loja-virtual-para-quem-vende-online).
+
+## Plataforma, privacidade e piloto
+
+- **Administrador:** `/admin <código>` (código gerado na 1ª execução em `bot/data/admin.json`, fora do Git) libera `/plataforma`, `/lojas`, `/loja <slug>`, `/piloto <slug>`, `/admin_conectar` e `/excluir_loja <slug>`. API `/api/admin/*` com chave própria (`X-Atende-Admin`), separada das chaves das lojas e sem dados pessoais dos clientes.
+- **Termo do piloto:** criar/assumir loja exige “Aceito” (registrado com data e hora). Cliente recebe aviso de privacidade na 1ª mensagem; `/excluir_dados` apaga/anonimiza (cliente) ou pede exclusão da loja (dono → admin). Ver [docs/privacidade.md](docs/privacidade.md).
+- **Piloto:** `piloto: true` por loja, “antes” preenchido pelo dono com `/antes`, saúde do piloto (dias ativos, mensagens/dia, pedidos, NPS). Playbook: [docs/piloto.md](docs/piloto.md).
 
 ## Bot de teste no Telegram
 

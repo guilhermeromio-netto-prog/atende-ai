@@ -265,3 +265,31 @@ code,.mono{font-family:var(--mono);font-size:.88em;background:var(--bg-2);border
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
 }
+
+/* ---------- plataforma, termo do piloto, privacidade ---------- */
+.link-btn{background:none;border:0;padding:0;color:inherit;text-decoration:underline;font:inherit;cursor:pointer}
+.vivo--demo{border-color:#22457d;background:var(--azul-esc);color:#DCE8FF}
+.vivo--demo a{color:#F0F6FF}
+.h3{font-size:1.05rem;margin:0 0 10px}
+.cab--p{margin-bottom:12px}
+.adm-form{margin-bottom:16px}
+.adm-form__campos{display:grid;grid-template-columns:2fr 1.4fr auto;gap:12px;align-items:end}
+.adm-tab tr.sel{background:var(--card-2)}
+.adm-tab th[scope=row]{font-weight:400}
+.adm-det{margin-top:16px}
+.adm-det h3{margin:18px 0 10px}
+.adm-barras{display:grid;grid-template-columns:repeat(30,1fr);gap:3px;align-items:end;height:90px;padding:8px;border:1px solid var(--borda);border-radius:var(--raio);background:var(--bg-2)}
+.adm-barras span{display:block;height:max(2px,var(--h));background:var(--azul);border-radius:3px 3px 0 0}
+.adm-eixo{display:flex;justify-content:space-between;margin-top:4px}
+.termo{margin-bottom:16px;border-color:#22457d}
+.termo ul{margin:0 0 12px;padding-left:20px}
+.termo li{margin-bottom:6px}
+.termo__acoes{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.termo-ok{margin:0 0 14px;color:var(--texto-2)}
+.pil-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.pil-grid .campo{margin-bottom:10px}
+.pil-lista{list-style:none;margin:0 0 10px;padding:0}
+.pil-lista li{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--borda)}
+.pil-lista strong{font-variant-numeric:tabular-nums}
+@media (max-width:860px){.adm-form__campos,.pil-grid{grid-template-columns:minmax(0,1fr)}}
+tbody th[scope=row]{background:transparent;white-space:normal;text-transform:none;letter-spacing:normal;font-size:.92rem;color:var(--texto);font-weight:600}

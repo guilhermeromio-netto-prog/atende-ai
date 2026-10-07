@@ -133,6 +133,46 @@
     U.toast('CSV exportado (' + l.length + ' linhas). ' + rot.pecas + '/' + rot.mao + ' somados no total.');
   }
 
+  // ---------- piloto: antes × depois (para o case)
+  function piloto() {
+    const vivo = S().vivoAtivo(); const seg = S().seg();
+    const pv = vivo ? (S().vivo.piloto || {}) : null;
+    const antes = vivo ? (pv.antes || {}) : (((S().st.piloto || {})[seg]) || {});
+    const l = S().ticketsSeg(); const agora = Date.now(); const ult = l.filter((t) => t.criado >= agora - 30 * DIA);
+    const vendas = seg === 'ecommerce' ? ult.filter((t) => (t.tipo || 'pedido') === 'pedido' && passou(t, 'Pago')).reduce((a, t) => a + (t.totalFinal || 0), 0)
+      : ult.filter((t) => t.status === 'Entregue').reduce((a, t) => a + (t.valorFinal || M.valorMedio(t)), 0);
+    const pedidos = ult.filter((t) => (t.tipo || 'pedido') === 'pedido').length;
+    const resp = ult.length ? ult.reduce((a, t) => a + (t.tempoRespostaSeg || 0), 0) / ult.length : null;
+    const B = AT.E.brlC;
+    const chip = (txt, bom) => ' <span class="chip ' + (bom ? 'chip--ok' : 'chip--atencao') + '">' + txt + '</span>';
+    const vez = antes.respostaMin && resp ? Math.round(antes.respostaMin * 60 / Math.max(1, resp)) : null;
+    const dv = antes.vendasMes ? Math.round((vendas - antes.vendasMes) / antes.vendasMes * 100) : null;
+    const dp = antes.pedidosMes ? Math.round((pedidos - antes.pedidosMes) / antes.pedidosMes * 100) : null;
+    const inp = (id, v, rot, suf) => '<label class="campo">' + rot + '<input class="inp" id="' + id + '" type="number" min="0" step="any" inputmode="decimal" value="' + (v == null ? '' : v) + '"' + (vivo ? ' disabled' : '') + ' aria-describedby="pil-ajuda">' + (suf ? '<span class="pequeno muted">' + suf + '</span>' : '') + '</label>';
+    return '<div class="pil-grid"><div><h3 class="h3">Antes do Atende AI' + (vivo ? '' : ' (preencha)') + '</h3>' +
+      inp('pil-resp', antes.respostaMin, 'Tempo médio para responder um cliente (min)') + inp('pil-vendas', antes.vendasMes, 'Vendas por mês (R$)') + inp('pil-ped', antes.pedidosMes, 'Pedidos por mês') +
+      '<p class="pequeno muted" id="pil-ajuda">' + (vivo ? 'No modo conectado, o dono preenche no bot: <code>/antes resposta 2h vendas R$ 8.000 pedidos 40</code>.' : 'Salvo só neste navegador (demonstração). No bot real: <code>/antes resposta 2h vendas R$ 8.000 pedidos 40</code>.') + '</p></div>' +
+      '<div><h3 class="h3">Com o Atende AI (últimos 30 dias)</h3><ul class="pil-lista">' +
+      '<li><span>1ª resposta média</span><strong>' + (resp == null ? '—' : U.tempoResp(resp)) + (vez ? chip(vez + '× mais rápido', true) : '') + '</strong></li>' +
+      '<li><span>Vendas</span><strong>' + B(vendas) + (dv != null ? chip((dv >= 0 ? '+' : '') + dv + '%', dv >= 0) : '') + '</strong></li>' +
+      '<li><span>Pedidos</span><strong>' + pedidos + (dp != null ? chip((dp >= 0 ? '+' : '') + dp + '%', dp >= 0) : '') + '</strong></li>' +
+      (vivo && pv.inicio ? '<li><span>Piloto</span><strong>' + (pv.ativo ? '🧪 desde ' + U.dataCurta(pv.inicio) + ' · ' + pv.dias_ativos + '/' + pv.dias + ' dias ativos' : 'não marcado') + '</strong></li>' : '') +
+      '</ul><p class="pequeno muted">Base para o estudo de caso do piloto. ' + (S().vivoAtivo() ? '' : 'Pedidos de exemplo são fictícios.') + '</p></div></div>';
+  }
+  function ligarPiloto(main) {
+    if (S().vivoAtivo()) return;
+    const salvar = () => {
+      const n = (id) => { const v = main.querySelector(id).value; return v === '' ? null : Math.max(0, Number(v)); };
+      S().st.piloto = S().st.piloto || {};
+      S().st.piloto[S().seg()] = { respostaMin: n('#pil-resp'), vendasMes: n('#pil-vendas'), pedidosMes: n('#pil-ped'), registradoEm: Date.now() };
+      S().salvar();
+      const foco = document.activeElement && document.activeElement.id;
+      main.querySelector('#db-piloto').innerHTML = piloto(); ligarPiloto(main);
+      if (foco) { const el = main.querySelector('#' + foco); if (el) { el.focus(); const v = el.value; el.value = ''; el.value = v; } }
+    };
+    main.querySelectorAll('#db-piloto input').forEach((i) => i.addEventListener('change', salvar));
+  }
+
   function render(main) {
     main.innerHTML = `
       <div class="cab"><div><div class="olho">Passo 4 · Gestão</div><h1>Dashboard ${({ oficina: 'de atendimento da oficina', loja: 'de atendimento da loja', ecommerce: 'da loja virtual' })[S().seg()]}</h1><p id="db-legenda"></p></div>
@@ -149,11 +189,13 @@
         <section class="card grafico"><h2>${S().seg() === 'ecommerce' ? 'Produtos mais vendidos' : 'Serviços mais pedidos'}</h2><div id="db-serv"></div></section>
         <section class="card grafico"><h2>Situação do SLA</h2><div id="db-sla"></div></section>
       </div>
-      <section class="card" style="margin-top:16px"><h2>Pedidos em risco de SLA</h2><div id="db-risco"></div></section>`;
+      <section class="card" style="margin-top:16px"><h2>Pedidos em risco de SLA</h2><div id="db-risco"></div></section>
+      <section class="card" style="margin-top:16px" aria-labelledby="db-pil-t"><h2 id="db-pil-t">🧪 Piloto: antes × depois</h2><div id="db-piloto"></div></section>`;
     main.querySelector('#db-periodo').addEventListener('change', (e) => { f.periodo = e.target.value; desenhar(main); });
     main.querySelector('#db-status').addEventListener('change', (e) => { f.status = e.target.value; desenhar(main); });
     main.querySelector('#db-csv').addEventListener('click', csv);
     desenhar(main);
+    main.querySelector('#db-piloto').innerHTML = piloto(); ligarPiloto(main);
     AT.V.dashboard._tick = () => { if (document.body.contains(main.querySelector('#db-kpis'))) desenhar(main); };
   }
   AT.V = AT.V || {};

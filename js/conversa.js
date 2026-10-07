@@ -14,7 +14,7 @@
     if (seg === 'ecommerce') return AT.ConversaEcom.iniciar();
     const neg = S().negocio(seg), def = S().segDef(seg), ts = Date.now();
     const conv = { etapa: 'problema', campo: null, dados: {}, intent: null, confianca: 0, ticketId: null, chat: [], opcoes: def.exemplos.slice(), canal: S().st.canal || 'telegram' };
-    conv.chat.push({ de: 'bot', ts, texto: 'Olá! 👋 Aqui é o atendimento automático da ' + neg.nome + '. ' + (seg === 'oficina' ? 'Me conte o que está acontecendo com o seu carro, do seu jeito.' : 'Me conte o que você precisa, do seu jeito.') });
+    conv.chat.push({ de: 'bot', ts, texto: 'Olá! 👋 Aqui é o atendimento automático da ' + neg.nome + '. ' + (seg === 'oficina' ? 'Me conte o que está acontecendo com o seu carro, do seu jeito.' : 'Me conte o que você precisa, do seu jeito.') + '\n\n🔒 Seus dados (nome, mensagens e pedidos) ficam na plataforma Atende AI e são usados só para este atendimento. Para apagar: /excluir_dados' });
     S().st.conversas[seg] = conv; S().salvar();
     return conv;
   };

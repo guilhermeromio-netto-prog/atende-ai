@@ -8,7 +8,7 @@ Existe um **bot real de teste** no Telegram: **[@Applojas10_bot](https://t.me/Ap
 ## Para o dono da oficina ou loja
 
 1. Abra https://t.me/Applojas10_bot?start=dono (ou envie `/dono`).
-2. Toque em **Assumir** um negócio de exemplo (já vem com catálogo) ou em **Criar meu negócio do zero**.
+2. Toque em **Assumir** um negócio de exemplo (já vem com catálogo) ou em **Criar meu negócio do zero**. Leia o **Termo de uso do piloto** e toque em **✅ Aceito** (obrigatório).
 3. Cadastre conversando, uma coisa por mensagem:
    - `Troca de óleo R$ 180 1h`
    - `Pastilha de freio peças R$ 160 a 320 mão de obra R$ 120 1h30`
@@ -29,6 +29,9 @@ Existe um **bot real de teste** no Telegram: **[@Applojas10_bot](https://t.me/Ap
 | `/codigo` | Código para outra pessoa da equipe (`/dono CÓDIGO`) |
 | `/conectar` | Link do painel web ligado aos dados ao vivo |
 | `/cliente` · `/dono` | Alternar entre testar como cliente e modo dono |
+| `/politicas` | Loja virtual: frete, pagamento, chave Pix e trocas |
+| `/antes` | Piloto: como era antes do bot (resposta, vendas e pedidos por mês) |
+| `/excluir_dados` | Apagar seus dados de cliente ou pedir a exclusão da loja |
 
 ## Para o cliente final
 
@@ -37,6 +40,7 @@ Existe um **bot real de teste** no Telegram: **[@Applojas10_bot](https://t.me/Ap
 3. Responda: nome, modelo e placa (oficina) ou bairro de entrega (loja), e a urgência.
 4. Receba o orçamento com itens, total, duração e prazo, e toque em **✅ Aprovar** ou **🙋 Falar com atendente**.
 5. Escolha o horário. Depois chegam sozinhas: confirmação, aviso de início, “pronto” e a pesquisa de satisfação (1 a 5 estrelas).
+6. Para apagar seus dados a qualquer momento: `/excluir_dados`.
 
 `/nova` recomeça · `/trocar` escolhe outro negócio · escrever “atendente” chama uma pessoa.
 
@@ -59,6 +63,7 @@ O bot mostra produtos, preço e estoque (entende erro de digitação), calcula f
 1. Abra https://t.me/Applojas10_bot?start=dono e toque em **➕ Criar meu negócio do zero**.
 2. Escreva o nome da loja (ex.: `Loja do Mano`).
 3. Escolha **🛒 Loja virtual (catálogo de exemplo)** (10 produtos fictícios para testar) ou **🛒 Loja virtual (catálogo vazio)**.
+4. Leia o **Termo de uso do piloto** e toque em **✅ Aceito**. Só depois disso a loja é criada (o aceite fica registrado com data e hora).
 
 ### 2. Cadastrar produtos e políticas conversando (uma coisa por mensagem)
 - Produto: `Fone bluetooth R$ 89 estoque 12 entrega 3 dias` (mandar o mesmo nome de novo atualiza preço/estoque)
@@ -77,6 +82,24 @@ O bot mostra produtos, preço e estoque (entende erro de digitação), calcula f
 4. O cliente pode perguntar “cadê meu pedido EC-3005?” (recebe status e rastreio), “quanto é o frete pro CEP 30140-071?” ou “quero trocar” (abre solicitação com motivo e a sua política).
 5. Carrinho esquecido recebe lembrete automático uma vez (modo teste: 10 minutos).
 6. `/painel` mostra pedidos, faturamento, ticket médio, conversão carrinho → pago, carrinhos abandonados, envio no prazo e trocas. `/conectar` abre o mesmo painel no navegador.
+
+## 🔒 Termo do piloto e privacidade
+
+- Quem cria ou assume uma loja vê o **Termo de uso do piloto** e só continua depois do **✅ Aceito**. “Não aceito” não cria nada.
+- Na 1ª conversa com cada negócio, o cliente recebe uma linha dizendo onde ficam os dados e como apagar.
+- `/excluir_dados`: o cliente apaga na hora nome, contato, mensagens e endereço (os pedidos ficam anônimos, só valor e status). O dono pede a exclusão da loja; o administrador confirma.
+- Política completa: [docs/privacidade.md](docs/privacidade.md) e https://guilhermeromio-netto-prog.github.io/atende-ai/#/privacidade
+
+## 🛡️ Para o administrador da plataforma (Guilherme)
+
+1. No bot, envie `/admin SEU_CÓDIGO` (ou abra o link `https://t.me/Applojas10_bot?start=SEU_CÓDIGO`). O código fica só em `bot/data/admin.json` no servidor; a mensagem com o código é apagada do chat. Cinco tentativas erradas bloqueiam por 1 hora.
+2. `/plataforma`: lojas ativas, conversas, pedidos, conversão, faturamento intermediado, 1ª resposta e NPS.
+3. `/lojas`: todas as lojas com segmento, donos, pedidos, faturamento e última atividade (botões para o detalhe). `/loja slug`: indicadores, saúde do piloto, antes × depois e pedidos recentes (sem dados pessoais).
+4. `/piloto slug` marca a loja como piloto (`/piloto slug off` desmarca). Os donos recebem o convite para preencher o “antes”: `/antes resposta 2h vendas R$ 8.000 pedidos 40`.
+5. `/admin_conectar`: link do **Modo plataforma** (https://guilhermeromio-netto-prog.github.io/atende-ai/#/admin) com a chave de administrador, separada das chaves das lojas. Sem a chave, a página mostra dados de demonstração.
+6. `/excluir_loja slug`: exclui a loja e os pedidos dela (pede confirmação). Pedidos de exclusão dos donos chegam com o botão “Excluir agora”.
+
+Playbook do piloto: [docs/piloto.md](docs/piloto.md).
 
 ## Limitações do modo de teste
 

@@ -74,11 +74,25 @@
     }));
   }
 
+  function termo() {
+    const ac = S().st.termoAceitoEm;
+    if (ac) return '<p class="termo-ok pequeno" role="status">📄 Termo de uso do piloto aceito em ' + U.dataHora(ac) + ' · <a href="#/privacidade">ler de novo</a></p>';
+    return '<section class="card termo" aria-labelledby="ob-termo-t"><h2 id="ob-termo-t" class="h3">📄 Termo de uso do piloto</h2><ul>' +
+      AT.Privacidade.TERMO.map((t) => '<li>' + U.esc(t) + '</li>').join('') + '</ul>' +
+      '<div class="termo__acoes"><button type="button" class="btn btn--pri btn--p" id="ob-termo-ok">✅ Aceito</button><a class="btn btn--p" href="#/privacidade">Ler a política completa</a></div>' +
+      '<p class="pequeno muted">No bot real, este aceite é obrigatório antes de criar ou assumir uma loja e fica registrado com data e hora.</p></section>';
+  }
+  function ligarTermo(main) {
+    const b = main.querySelector('#ob-termo-ok');
+    if (b) b.addEventListener('click', () => { S().st.termoAceitoEm = Date.now(); S().salvar(); main.querySelector('#ob-termo').innerHTML = termo(); U.toast('Termo do piloto aceito.'); const t = main.querySelector('#ob-termo .termo-ok'); if (t) { t.tabIndex = -1; t.focus(); } });
+  }
+
   function render(main) {
     const seg = S().seg(); const def = S().segDef(seg); const ob = estado(); const ecom = seg === 'ecommerce';
     main.innerHTML = `
       <div class="cab"><div><div class="olho">Passo 1 · Cadastro pelo chat</div><h1>Converse com o assistente e monte seu catálogo</h1>
       <p>${ecom ? 'O lojista conversa com o bot do Telegram como fala no dia a dia. O assistente (simulado por regras) extrai produto, preço, estoque, prazo de envio e as políticas de frete, pagamento e troca, e preenche as tabelas. Tudo pode ser corrigido à mão.' : 'O dono do negócio conversa com o bot do Telegram como fala no dia a dia. O assistente (simulado por regras) extrai serviço, preço, duração e horário, e preenche as tabelas ao lado. Tudo pode ser corrigido à mão.'}</p></div></div>
+      <div id="ob-termo">${termo()}</div>
       <div class="duas duas--chat">
         ${AT.Chat.moldura({ id: 'ob-chat', avatar: 'A', nome: 'Atende AI · Cadastro', status: 'bot · configurando ' + S().negocio().nome, label: 'Mensagem para o assistente de cadastro', placeholder: ecom ? 'Ex.: Fone bluetooth R$ 89 estoque 12 entrega 3 dias' : 'Ex.: Alinhamento R$ 150 1h' })}
         <div class="lateral">
@@ -97,6 +111,7 @@
         <button type="button" class="btn btn--p" id="ob-add">+ Adicionar linha</button></div>
         <div class="tabela-wrap"><table><thead><tr>${ecom ? '<th>Produto</th><th>Categoria</th><th class="num">Preço (R$)</th><th class="num">Estoque</th><th class="num">Envio (dias úteis)</th>' : '<th>Serviço</th><th>Categoria</th><th class="num">' + U.esc(def.rotulos.pecas) + ' mín</th><th class="num">' + U.esc(def.rotulos.pecas) + ' máx</th><th class="num">' + U.esc(def.rotulos.mao) + ' mín</th><th class="num">' + U.esc(def.rotulos.mao) + ' máx</th><th class="num">Duração</th>'}<th><span class="sr">Ações</span></th></tr></thead><tbody id="ob-cat"></tbody></table></div>
       </section>`;
+    ligarTermo(main);
     const wa = main.querySelector('#ob-chat'); const log = wa.querySelector('.cv__log'); const ops = wa.querySelector('.cv__opcoes');
     const form = wa.querySelector('form'); const inp = form.querySelector('input');
     const lado = ['dono'];

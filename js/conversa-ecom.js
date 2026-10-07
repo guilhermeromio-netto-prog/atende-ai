@@ -16,7 +16,7 @@
   CE.iniciar = function () {
     const neg = S().negocio(SEG), def = S().segDef(SEG);
     const conv = { seg: SEG, etapa: 'menu', dados: {}, carrinho: {}, chat: [], pedidos: [], opcoes: def.exemplos.slice(), canal: S().st.canal || 'telegram', ticketId: null };
-    conv.chat.push({ de: 'bot', ts: Date.now(), teclado: MENU, texto: 'Olá! 👋 Aqui é o atendimento automático da ' + neg.nome + ' 🛒\nPergunte do seu jeito: “tem fone bluetooth?”, “quanto é o frete pro meu CEP?”, “cadê meu pedido?”. Ou toque numa opção.' });
+    conv.chat.push({ de: 'bot', ts: Date.now(), teclado: MENU, texto: 'Olá! 👋 Aqui é o atendimento automático da ' + neg.nome + ' 🛒\nPergunte do seu jeito: “tem fone bluetooth?”, “quanto é o frete pro meu CEP?”, “cadê meu pedido?”. Ou toque numa opção.\n\n🔒 Seus dados (nome, mensagens e pedidos) ficam na plataforma Atende AI e são usados só para este atendimento. Para apagar: /excluir_dados' });
     S().st.conversas[SEG] = conv; S().salvar();
     return conv;
   };

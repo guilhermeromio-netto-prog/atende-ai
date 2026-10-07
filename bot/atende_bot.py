@@ -25,6 +25,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import motor as M  # noqa: E402
 from ecommerce import EcomMixin  # noqa: E402
+import plataforma as P  # noqa: E402
+from plataforma import PlataformaMixin  # noqa: E402
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 DATA = os.environ.get("ATENDE_DATA") or os.path.join(AQUI, "data")
@@ -125,8 +127,8 @@ def novo_tenant(slug, nome, seg, exemplo=True):
             "horario": json.loads(json.dumps(sd["negocio"]["horario"])),
             "catalogo": json.loads(json.dumps(sd["catalogo"])) if exemplo else [],
             "automacoes": json.loads(json.dumps(M.DADOS["automacoes"][seg])),
-            "sla": json.loads(json.dumps(M.DADOS["sla"][seg])), "metricas": {"carrinhos": 0, "abandonados": 0},
-            **({"politicas": M.politicas_padrao()} if seg == "ecommerce" else {})}
+            "sla": json.loads(json.dumps(M.DADOS["sla"][seg])), "metricas": {"carrinhos": 0, "abandonados": 0, "conversas": 0},
+            "piloto": False, "termos": [], **({"politicas": M.politicas_padrao()} if seg == "ecommerce" else {})}
 
 
 def migrar(d):
@@ -138,12 +140,16 @@ def migrar(d):
         d["tenants"]["loja-exemplo-online"] = t
         mudou = True
     for t in d["tenants"].values():
+        if t["id"] in ("oficina-pista-livre", "casa-forte", "loja-exemplo-online") and "exemplo" not in t:
+            t["exemplo"] = True; mudou = True  # negócios de demonstração (mesmo se alguém assumiu para testar)
         if "metricas" not in t:
             t["metricas"] = {"carrinhos": 0, "abandonados": 0}; mudou = True
         if t["segmento"] == "ecommerce" and "politicas" not in t:
             t["politicas"] = M.politicas_padrao(); mudou = True
-    if d.get("versao", 1) < 2:
-        d["versao"] = 2; mudou = True
+    if "plataforma" not in d:
+        d["plataforma"] = {"admins": [], "tentativas": {}}; mudou = True
+    if d.get("versao", 1) < 3:
+        d["versao"] = 3; mudou = True
     return mudou
 
 
@@ -200,18 +206,36 @@ class IA:
 
 # ============================================================ Bot
 CMD_CLIENTE = [("start", "Começar o atendimento"), ("trocar", "Escolher outro negócio"), ("nova", "Nova conversa"),
-               ("dono", "Sou dono de um negócio"), ("ajuda", "Como funciona")]
+               ("dono", "Sou dono de um negócio"), ("excluir_dados", "Apagar meus dados"), ("ajuda", "Como funciona")]
 CMD_DONO = [("painel", "Resumo e indicadores"), ("pedidos", "Pedidos em aberto"), ("catalogo", "Ver catálogo"),
             ("politicas", "Frete, pagamento e trocas (loja virtual)"), ("horario", "Ver horário"), ("link", "Link para seus clientes"), ("conectar", "Ligar o dashboard web"),
             ("codigo", "Código para outro atendente"), ("cliente", "Testar como cliente"), ("dono", "Voltar ao modo dono"),
-            ("ajuda", "Comandos")]
+            ("antes", "Piloto: como era antes do bot"), ("excluir_dados", "Apagar dados / pedir exclusão da loja"), ("ajuda", "Comandos")]
 ETAPA_TXT = {"problema": "entendendo o problema", "pergunta": "coletando dados", "orcado": "orçamento enviado",
              "agendar": "escolhendo horário", "fim": "agendado", "humano": "com atendente"}
 
 
-class Bot(EcomMixin):
+class Bot(PlataformaMixin, EcomMixin):
+    CMD_DONO, CMD_CLIENTE, PAGES = CMD_DONO, CMD_CLIENTE, PAGES
+    SEG_TXT = {"oficina": "oficina", "loja": "loja", "ecommerce": "loja virtual"}
+
     def __init__(self, tg: Telegram, db: DB, ia: IA):
         self.tg, self.db, self.ia = tg, db, ia
+        self.admin_cfg = P.carregar_admin(DATA)
+        self._msg_id = None
+
+    # pontes para funções do módulo (usadas pelo mixin da plataforma)
+    def slugify(self, s):
+        return slugify(s)
+
+    def novo_tenant(self, *a, **k):
+        return novo_tenant(*a, **k)
+
+    def tunnel_url(self):
+        return tunnel_url()
+
+    def kpis(self, t, tks):
+        return kpis(t, tks)
 
     # ---------------------------------------------------------------- utilidades
     def link(self, slug):
@@ -261,17 +285,22 @@ class Bot(EcomMixin):
         return b
 
     def comandos_dono(self, chat_id):
-        self.tg.call("setMyCommands", commands=[{"command": c, "description": d} for c, d in CMD_DONO],
-                     scope={"type": "chat", "chat_id": chat_id}, language_code=None)
+        self.comandos_chat(chat_id, self.db.user(chat_id))
 
     # ---------------------------------------------------------------- entrada
     def processar(self, upd):
         with self.db.lock:
             try:
+                cid = None
                 if "message" in upd and "text" in upd["message"]:
+                    cid = upd["message"].get("chat", {}).get("id")
+                    self._msg_id = upd["message"].get("message_id")
                     self.on_mensagem(upd["message"])
                 elif "callback_query" in upd:
+                    cid = upd["callback_query"].get("message", {}).get("chat", {}).get("id")
                     self.on_callback(upd["callback_query"])
+                if cid is not None:
+                    self.registrar_atividade(cid)
             except Exception:
                 log("ERRO ao processar update:", traceback.format_exc())
             finally:
@@ -296,8 +325,12 @@ class Bot(EcomMixin):
     # ---------------------------------------------------------------- comandos
     def comando(self, cid, u, cmd, arg):
         if cmd == "start":
-            if arg in ("dono", "admin"):
+            if arg == "dono":
                 return self.cmd_dono(cid, u, "")
+            if arg == "admin":
+                return self.cmd_admin(cid, u, "")
+            if re.fullmatch(r"ADM[0-9A-F]{12}", arg or ""):
+                return self.cmd_admin(cid, u, arg, self._msg_id)
             if arg and self.db.tenant(arg):
                 u["tenant"] = arg; u["modo"] = "cliente"
                 return self.iniciar_conversa(cid, u)
@@ -308,6 +341,14 @@ class Bot(EcomMixin):
             return self.iniciar_conversa(cid, u)
         if cmd == "dono":
             return self.cmd_dono(cid, u, arg)
+        if cmd == "admin":
+            return self.cmd_admin(cid, u, arg, self._msg_id)
+        if cmd in [c for c, _ in P.CMD_ADMIN]:
+            return self.comando_admin(cid, u, cmd, arg)
+        if cmd in ("excluir_dados", "excluirdados", "apagar_dados"):
+            return self.cmd_excluir(cid, u)
+        if cmd == "privacidade":
+            return self.tg.send(cid, f"🔒 Privacidade: seus dados ficam na plataforma Atende AI (operada por Guilherme Romio Netto, byGui) e são usados só para o atendimento e para métricas do piloto. Política: {PAGES}#/privacidade\nPara apagar seus dados: /excluir_dados")
         if cmd == "ajuda":
             return self.cmd_ajuda(cid, u)
         if cmd == "trocar":
@@ -327,6 +368,10 @@ class Bot(EcomMixin):
             return self.tg.send(cid, "Esse comando é para donos de negócio. Se você é dono, envie /dono.")
         u["modo"] = "dono"
         tenant = self.db.tenant(u.get("tenant_dono") or u["dono_de"][0])
+        if not self.termo_ok(cid, tenant):
+            return self.exigir_termo(cid, u, {"tipo": "existente", "slug": tenant["id"]})
+        if cmd == "antes":
+            return self.cmd_antes(cid, tenant, arg)
         if cmd == "painel":
             return self.cmd_painel(cid, u)
         if cmd == "pedidos":
@@ -356,6 +401,8 @@ class Bot(EcomMixin):
         return self.tg.send(cid, "Não conheço esse comando. Veja /ajuda.")
 
     def cmd_ajuda(self, cid, u):
+        if self.eh_admin(cid):
+            self.tg.send(cid, "🛡️ <b>Admin da plataforma</b>\n" + "\n".join(f"/{c} — {d}" for c, d in P.CMD_ADMIN))
         td = self.db.tenant(u.get("tenant_dono") or (u.get("dono_de") or [""])[0]) if u.get("dono_de") else None
         if td and u["modo"] == "dono" and td["segmento"] == "ecommerce":
             return self.tg.send(cid, "<b>Modo dono · Loja virtual</b>\nEscreva naturalmente:\n• <code>Fone bluetooth R$ 89 estoque 12 entrega 3 dias</code>\n• <code>Frete grátis acima de R$ 199</code>\n• <code>Pix com 5% de desconto, cartão em até 6x</code>\n• <code>Chave pix: sua-chave</code>\n\n" +
@@ -363,7 +410,7 @@ class Bot(EcomMixin):
         if u.get("dono_de") and u["modo"] == "dono":
             return self.tg.send(cid, "<b>Modo dono</b>\nEscreva naturalmente para cadastrar:\n• <code>Troca de óleo R$ 180 1h</code>\n• <code>Pastilha de freio peças R$ 160 a 320 mão de obra R$ 120 1h30</code>\n• <code>Seg a sex 8h às 18h; sábado 8h às 12h</code>\n• <code>Minha oficina se chama Auto Center Silva</code>\n\n" +
                                 "\n".join(f"/{c} — {d}" for c, d in CMD_DONO) + "\n/remover N — remove o item N do catálogo")
-        return self.tg.send(cid, "<b>Como funciona</b>\nConte o problema do seu jeito (ex.: “barulho ao frear”). Eu pergunto o que falta, monto o orçamento com os preços do negócio e você aprova com um toque.\n\n/nova — recomeçar\n/trocar — escolher outro negócio\n/dono — sou dono de um negócio\n\n<i>Assistente automático em modo de teste. Os valores são estimativas do catálogo do negócio.</i>")
+        return self.tg.send(cid, "<b>Como funciona</b>\nConte o problema do seu jeito (ex.: “barulho ao frear”). Eu pergunto o que falta, monto o orçamento com os preços do negócio e você aprova com um toque.\n\n/nova — recomeçar\n/trocar — escolher outro negócio\n/dono — sou dono de um negócio\n/excluir_dados — apagar meus dados\n\n<i>Assistente automático em modo de teste. Os valores são estimativas do catálogo do negócio.</i>")
 
     def escolher_negocio(self, cid, texto):
         bts = [({"oficina": "🔧 ", "ecommerce": "🛒 "}.get(t["segmento"], "🏬 ") + t["nome"], f"t:{slug}") for slug, t in self.db.d["tenants"].items()]
@@ -374,9 +421,12 @@ class Bot(EcomMixin):
             t = next((t for t in self.db.d["tenants"].values() if t["codigo"] == arg.strip().upper()), None)
             if not t:
                 return self.tg.send(cid, "Código não encontrado. Confira com o dono do negócio.")
-            return self.virar_dono(cid, u, t, coadmin=True)
+            return self.exigir_termo(cid, u, {"tipo": "codigo", "slug": t["id"]})
         if u.get("dono_de"):
             u["modo"] = "dono"
+            td = self.db.tenant(u.get("tenant_dono") or u["dono_de"][0])
+            if td and not self.termo_ok(cid, td):
+                return self.exigir_termo(cid, u, {"tipo": "existente", "slug": td["id"]})
             return self.cmd_painel(cid, u)
         livres = [t for t in self.db.d["tenants"].values() if not t["donos"]]
         tipos = {"oficina": "oficina", "ecommerce": "loja virtual"}
@@ -481,6 +531,8 @@ class Bot(EcomMixin):
     # ---------------------------------------------------------------- dono: texto livre
     def texto_dono(self, cid, u, txt):
         t = self.db.tenant(u.get("tenant_dono") or u["dono_de"][0])
+        if not self.termo_ok(cid, t):
+            return self.exigir_termo(cid, u, {"tipo": "existente", "slug": t["id"]})
         if u.get("aguardando_rastreio"):
             tk = self.db.ticket(u.pop("aguardando_rastreio"))
             if tk and tk["tenant"] in u.get("dono_de", []):
@@ -530,9 +582,10 @@ class Bot(EcomMixin):
             return self.ecom_iniciar(cid, u, t)
         sd = M.DADOS["segmentos"][t["segmento"]]
         u["conv"] = {"tenant": slug, "etapa": "problema", "campo": None, "dados": {}, "intent": None, "confianca": 0, "ticket": None}
+        priv = self.abertura(u, t)
         quem = "com o seu carro" if t["segmento"] == "oficina" else "que você precisa"
         ex = " · ".join(f"“{e}”" for e in sd["exemplos"][:3])
-        return self.tg.send(cid, f"Olá! 👋 Aqui é o atendimento automático da <b>{E(t['nome'])}</b>.\nMe conte o que está acontecendo {quem}, do seu jeito.\n\nExemplos: {ex}\n\n<i>Assistente automático (modo de teste). A qualquer momento escreva “atendente” para falar com uma pessoa.</i>")
+        return self.tg.send(cid, f"Olá! 👋 Aqui é o atendimento automático da <b>{E(t['nome'])}</b>.\nMe conte o que está acontecendo {quem}, do seu jeito.\n\nExemplos: {ex}\n\n<i>Assistente automático (modo de teste). A qualquer momento escreva “atendente” para falar com uma pessoa.</i>" + priv)
 
     def texto_cliente(self, cid, u, txt, valor=None):
         if not u.get("conv"):
@@ -761,6 +814,18 @@ class Bot(EcomMixin):
                         rotulo = b["text"]
         except Exception:
             pass
+        if dado in ("termo:ok", "termo:nao"):
+            return self.termo_resposta(cid, u, dado == "termo:ok")
+        if dado.startswith("exc:"):
+            return self.excluir_callback(cid, u, dado)
+        if dado.startswith("adm:pil:"):
+            if not self.eh_admin(cid):
+                return self.tg.send(cid, "Acesso negado: comando restrito ao administrador da plataforma.")
+            _, _, slug, onoff = dado.split(":")
+            t = self.db.tenant(slug)
+            return self.marcar_piloto(cid, t, onoff == "on") if t else None
+        if dado.startswith("adm:"):
+            return self.admin_callback(cid, u, dado)
         # dono
         if dado.startswith("rs:"):
             tk = self.db.ticket(dado[3:])
@@ -812,19 +877,15 @@ class Bot(EcomMixin):
                 return
             if t["donos"] and cid not in t["donos"]:
                 return self.tg.send(cid, "Esse negócio já tem dono. Peça o código de atendente para ele e envie /dono CÓDIGO.")
-            return self.virar_dono(cid, u, t)
+            return self.exigir_termo(cid, u, {"tipo": "claim", "slug": t["id"]})
         if dado == "novo":
             u["aguardando"] = "novo_nome"
             return self.tg.send(cid, "Qual é o nome do seu negócio?")
         if dado.startswith("seg:"):
             _, seg, modo = dado.split(":")
-            nome = u.get("novo_nome") or "Meu negócio"
-            slug = slugify(nome)
-            while self.db.tenant(slug):
-                slug = slugify(nome)[:22] + "-" + secrets.token_hex(2)
-            t = novo_tenant(slug, nome, seg, modo == "ex")
-            self.db.d["tenants"][slug] = t
-            return self.virar_dono(cid, u, t)
+            if seg not in M.DADOS["segmentos"]:
+                return
+            return self.exigir_termo(cid, u, {"tipo": "criar", "nome": u.get("novo_nome") or "Meu negócio", "seg": seg, "modo": modo})
         if dado.startswith("t:"):
             if self.db.tenant(dado[2:]):
                 u["tenant"] = dado[2:]
@@ -972,7 +1033,7 @@ def criar_api(bot: Bot, ia: IA):
             if o in CORS_OK:
                 self.send_header("Access-Control-Allow-Origin", o)
                 self.send_header("Vary", "Origin")
-                self.send_header("Access-Control-Allow-Headers", "X-Atende-Chave")
+                self.send_header("Access-Control-Allow-Headers", "X-Atende-Chave, X-Atende-Admin")
                 self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
 
         def _json(self, code, obj):
@@ -996,6 +1057,22 @@ def criar_api(bot: Bot, ia: IA):
                                             "negocios": len(bot.db.d["tenants"]), "agora": M.agora_ms()})
             if not url.path.startswith("/api/"):
                 return self._json(404, {"erro": "não encontrado"})
+            if url.path.startswith("/api/admin/"):
+                chave = self.headers.get("X-Atende-Admin") or q.get("admin", "")
+                if not chave or not secrets.compare_digest(chave.encode(), bot.admin_cfg["chave_api"].encode()):
+                    return self._json(401, {"erro": "chave de administrador inválida"})
+                with bot.db.lock:
+                    d = bot.db.d
+                    if url.path == "/api/admin/plataforma":
+                        return self._json(200, P.plataforma(d))
+                    if url.path == "/api/admin/lojas":
+                        return self._json(200, {"lojas": [P.resumo_loja(t, [x for x in d["tickets"] if x["tenant"] == t["id"]], d["usuarios"]) for t in d["tenants"].values()]})
+                    if url.path == "/api/admin/loja":
+                        lj = next((x for x in P.export_admin(d)["lojas"] if x["id"] == q.get("slug")), None)
+                        return self._json(200, lj) if lj else self._json(404, {"erro": "loja não encontrada"})
+                    if url.path == "/api/admin/export":
+                        return self._json(200, P.export_admin(d))
+                return self._json(404, {"erro": "rota desconhecida"})
             with bot.db.lock:
                 t = bot.db.tenant(q.get("negocio", ""))
                 chave = self.headers.get("X-Atende-Chave") or q.get("chave", "")
@@ -1012,6 +1089,7 @@ def criar_api(bot: Bot, ia: IA):
                 if url.path == "/api/export":
                     return self._json(200, {"negocio": neg, "catalogo": t["catalogo"], "automacoes": t["automacoes"], "sla": t["sla"],
                                             "politicas": t.get("politicas"), "metricas": t.get("metricas", {}),
+                                            "piloto": {"ativo": bool(t.get("piloto")), **P.saude_piloto(t, tks)},
                                             "pedidos": [ticket_publico(x) for x in tks], "kpis": kpis(t, tks), "geradoEm": M.agora_ms()})
             return self._json(404, {"erro": "rota desconhecida"})
 
@@ -1045,6 +1123,7 @@ def main():
     configurar(TG)
     db = DB(DB_PATH)
     ia = IA(); ia.testar()
+    log("Admin da plataforma: código em data/admin.json (nunca no log); admins atuais:", len(db.d.get("plataforma", {}).get("admins", [])))
     bot = Bot(TG, db, ia)
     criar_api(bot, ia)
     log("API em http://127.0.0.1:%d" % API_PORT)

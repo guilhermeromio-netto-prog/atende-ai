@@ -2,7 +2,7 @@
 (function (AT) {
   'use strict';
   const U = AT.U;
-  const ROTAS = { '': 'inicio', 'como-usar': 'comoUsar', onboarding: 'onboarding', atendimento: 'atendimento', pedidos: 'pedidos', dashboard: 'dashboard', config: 'config' };
+  const ROTAS = { '': 'inicio', 'como-usar': 'comoUsar', onboarding: 'onboarding', atendimento: 'atendimento', pedidos: 'pedidos', dashboard: 'dashboard', config: 'config', admin: 'admin', privacidade: 'privacidade' };
   const main = document.getElementById('conteudo');
   let atual = null;
 

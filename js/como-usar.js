@@ -12,7 +12,7 @@
       <section class="card" aria-labelledby="g-dono"><h2 id="g-dono">🧑‍🔧 Para o dono da oficina ou loja</h2>
         <ol>
           <li>Abra <a href="${BOT}?start=dono">${BOT.replace('https://', '')}?start=dono</a> (ou envie <code>/dono</code> no bot).</li>
-          <li>Toque em <strong>Assumir</strong> um negócio de exemplo (já vem com catálogo) ou em <strong>Criar meu negócio do zero</strong>.</li>
+          <li>Toque em <strong>Assumir</strong> um negócio de exemplo (já vem com catálogo) ou em <strong>Criar meu negócio do zero</strong>. Leia o <strong>Termo de uso do piloto</strong> e toque em <strong>✅ Aceito</strong> (obrigatório, fica registrado).</li>
           <li>Cadastre conversando, uma coisa por mensagem: <code>Troca de óleo R$ 180 1h</code>, <code>Pastilha de freio peças R$ 160 a 320 mão de obra R$ 120 1h30</code>, <code>Seg a sex 8h às 18h; sábado 8h às 12h</code>.</li>
           <li>Envie <code>/link</code> e divulgue o link para seus clientes (Instagram, Google, QR code no balcão).</li>
           <li>Quando um cliente pedir orçamento, você recebe a notificação com botões: <strong>▶ Avançar</strong> (Aprovado → Em serviço → Pronto → Entregue) e <strong>💬 Responder cliente</strong>. Cada avanço manda a mensagem automática certa para o cliente.</li>
@@ -40,6 +40,7 @@
           <li>Abra <a href="${BOT}?start=dono">${BOT.replace('https://', '')}?start=dono</a> e toque em <strong>➕ Criar meu negócio do zero</strong>.</li>
           <li>Escreva o nome da loja (ex.: <code>Loja do Mano</code>).</li>
           <li>Escolha <strong>🛒 Loja virtual (catálogo de exemplo)</strong> para começar com 10 produtos fictícios ou <strong>🛒 Loja virtual (catálogo vazio)</strong> para cadastrar os seus.</li>
+          <li>Leia o <strong>Termo de uso do piloto</strong> e toque em <strong>✅ Aceito</strong>. Só depois disso a loja é criada.</li>
         </ol>
         <h3>2. Cadastrar produtos e políticas (conversando)</h3>
         <ul>
@@ -68,6 +69,26 @@
           <li>Pedidos e Dashboard mostram a faixa verde <strong>Modo conectado</strong> e se atualizam a cada 30 s. Para desligar, vá em Configurações → Modo conectado.</li>
         </ol>
         <p class="pequeno muted">A chave só lê os pedidos daquele negócio e não deve ser compartilhada. No painel web os pedidos reais são somente leitura: o avanço é feito pelos botões no Telegram.</p>
+      </section>
+
+      <section class="card" aria-labelledby="g-priv" id="privacidade-piloto"><h2 id="g-priv">🔒 Termo do piloto e privacidade</h2>
+        <ul>
+          <li>Ao criar ou assumir uma loja, o bot mostra o <strong>Termo de uso do piloto</strong> e só continua depois do <strong>✅ Aceito</strong> (fica registrado com data e hora). “Não aceito” não cria nada.</li>
+          <li>Na 1ª conversa com cada negócio, o cliente recebe uma linha avisando onde ficam os dados e como apagar.</li>
+          <li><code>/excluir_dados</code>: o cliente apaga na hora nome, contato, mensagens e endereço (os pedidos ficam anônimos); o dono pede a exclusão da loja e o administrador confirma.</li>
+        </ul>
+        <p class="pequeno muted">Política completa: <a href="#/privacidade">Privacidade</a>.</p>
+      </section>
+
+      <section class="card" aria-labelledby="g-adm" id="admin"><h2 id="g-adm">🛡️ Para o administrador da plataforma</h2>
+        <ol>
+          <li>No bot, envie <code>/admin SEU_CÓDIGO</code> (o código fica só no servidor; a mensagem é apagada do chat depois do uso). Cinco tentativas erradas bloqueiam por 1 hora.</li>
+          <li><code>/plataforma</code>: lojas ativas, conversas, pedidos, conversão, faturamento intermediado, tempo de resposta e NPS.</li>
+          <li><code>/lojas</code> lista todas as lojas (segmento, donos, pedidos, faturamento, última atividade). <code>/loja slug</code> mostra indicadores, saúde do piloto e pedidos recentes.</li>
+          <li><code>/piloto slug</code> marca uma loja como piloto (<code>/piloto slug off</code> desmarca). Os donos recebem o convite para preencher o “antes” com <code>/antes resposta 2h vendas R$ 8.000 pedidos 40</code>.</li>
+          <li><code>/admin_conectar</code> manda o link do <a href="#/admin">Modo plataforma</a> com a chave de administrador (separada das chaves das lojas). Sem chave, a página mostra dados de demonstração.</li>
+          <li><code>/excluir_loja slug</code> exclui uma loja e os pedidos dela (pede confirmação).</li>
+        </ol>
       </section>
 
       <section class="card" aria-labelledby="g-lim"><h2 id="g-lim">⚠️ Limitações do modo de teste</h2>

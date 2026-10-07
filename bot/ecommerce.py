@@ -42,10 +42,11 @@ class EcomMixin:
     def ecom_iniciar(self, cid, u, t):
         u["conv"] = {"tenant": t["id"], "seg": "ecommerce", "etapa": "menu", "dados": {}, "carrinho": {}, "carrinhoEm": None,
                      "lembrado": False, "ticket": None, "chat": [], "volta": None}
+        priv = self.abertura(u, t)
         aviso = "\n\n⚠️ <i>Loja de exemplo para teste: os produtos são fictícios e nenhum pagamento deve ser feito.</i>" if t.get("exemplo") else ""
         return self.tg.send(cid, f"Olá! 👋 Aqui é o atendimento automático da <b>{E(t['nome'])}</b> 🛒\n"
                                  f"Pergunte do seu jeito: “tem fone bluetooth?”, “quanto é o frete pro meu CEP?”, “cadê meu pedido?”.\n"
-                                 f"Ou toque numa opção:{aviso}\n\n<i>Assistente automático (modo de teste). Escreva “atendente” para falar com uma pessoa.</i>", self.ecom_menu())
+                                 f"Ou toque numa opção:{aviso}\n\n<i>Assistente automático (modo de teste). Escreva “atendente” para falar com uma pessoa.</i>" + priv, self.ecom_menu())
 
     # ------------------------------------------------------------ entrada do cliente
     def ecom_texto(self, cid, u, t, txt, valor=None):

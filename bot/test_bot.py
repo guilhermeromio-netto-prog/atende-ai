@@ -34,7 +34,7 @@ DONO, CLI = 111, 222
 
 def msg(chat, texto):
     uid[0] += 1
-    bot.processar({"update_id": uid[0], "message": {"chat": {"id": chat, "type": "private"}, "from": {"first_name": "Teste%d" % chat}, "text": texto}})
+    bot.processar({"update_id": uid[0], "message": {"message_id": uid[0], "chat": {"id": chat, "type": "private"}, "from": {"first_name": "Teste%d" % chat}, "text": texto}})
 
 
 def ultimo_teclado(chat):
@@ -61,6 +61,11 @@ ok = lambda c, m: print(("✅ " if c else "❌ ") + m) or (c or sys.exit(1))  # 
 # dono assume a oficina de exemplo e cadastra serviço
 msg(DONO, "/dono"); tocar(DONO, "Assumir: Oficina")
 t = db.tenant("oficina-pista-livre")
+ok("Termo de uso do piloto" in textos(DONO)[-1] and t["donos"] == [], "termo do piloto aparece antes de assumir (nada liberado ainda)")
+msg(DONO, "/painel")
+ok("donos de negócio" in textos(DONO)[-1], "sem aceite, comandos de dono continuam bloqueados")
+tocar(DONO, "Aceito")
+ok(t["termos"] and t["termos"][0]["chat"] == DONO and t["termos"][0]["aceitoEm"] > 0, "aceite do termo registrado com data/hora")
 ok(t["donos"] == [DONO], "dono assumiu o negócio")
 msg(DONO, "Polimento técnico R$ 350 a 480 3h")
 ok(any(c["nome"] == "Polimento técnico" and c["duracao"] == 180 for c in t["catalogo"]), "cadastro pelo chat adicionou serviço")
@@ -119,6 +124,8 @@ DONO2, CLI2, CLI3 = 333, 444, 555
 ok(db.tenant("loja-exemplo-online") and db.tenant("loja-exemplo-online")["segmento"] == "ecommerce", "loja de exemplo online semeada")
 msg(DONO2, "/dono"); tocar(DONO2, "Criar meu negócio"); msg(DONO2, "Loja do Mano")
 tocar(DONO2, "Loja virtual (catálogo vazio)")
+ok(not any(x["nome"] == "Loja do Mano" for x in db.d["tenants"].values()), "loja só é criada depois do aceite")
+tocar(DONO2, "Aceito")
 t2 = next(x for x in db.d["tenants"].values() if x["nome"] == "Loja do Mano")
 ok(t2["segmento"] == "ecommerce" and t2["catalogo"] == [] and t2.get("politicas"), "dono criou loja virtual vazia com políticas padrão")
 msg(DONO2, "Fone bluetooth R$ 89 estoque 12 entrega 3 dias")
@@ -215,5 +222,83 @@ if os.environ.get("ATENDE_DUMP"):
     json.dump(d2, open(os.environ["ATENDE_DUMP"].replace(".json", "-ecom.json"), "w"), ensure_ascii=False)
 if os.environ.get("ATENDE_DUMP"):
     json.dump(d, open(os.environ["ATENDE_DUMP"], "w"), ensure_ascii=False)
+
+# ===================== Plataforma: termo, privacidade, admin, piloto, exclusão
+def cb(chat, data):
+    uid[0] += 1
+    bot.processar({"update_id": uid[0], "callback_query": {"id": "c%d" % uid[0], "data": data, "from": {"first_name": "x"},
+                                                          "message": {"chat": {"id": chat}, "reply_markup": {"inline_keyboard": []}}}})
+
+
+DONO4, ADMIN, ATAQ, CLI5 = 666, 777, 888, 999
+msg(DONO4, "/dono"); tocar(DONO4, "Criar meu negócio"); msg(DONO4, "Loja Recusada"); tocar(DONO4, "Loja (catálogo vazio)"); tocar(DONO4, "Não aceito")
+ok(not any(x["nome"] == "Loja Recusada" for x in db.d["tenants"].values()) and not db.user(DONO4)["dono_de"], "sem aceite (Não aceito) nada é criado")
+t["termos"] = []  # dono antigo, de antes do termo
+msg(DONO, "/painel")
+ok("Termo de uso do piloto" in textos(DONO)[-1], "dono existente sem aceite vê o termo no próximo comando")
+tocar(DONO, "Aceito")
+ok("painel" in textos(DONO)[-1] and t["termos"], "depois do aceite o dono existente segue para o painel")
+msg(CLI5, "/start casa-forte")
+ok("/excluir_dados" in textos(CLI5)[-1] and "Atende AI" in textos(CLI5)[-1], "1ª mensagem ao cliente traz a nota de privacidade")
+msg(CLI5, "/nova")
+ok("/excluir_dados" not in textos(CLI5)[-1], "nota de privacidade só na 1ª conversa com o negócio")
+
+# admin
+for cmd in ("/plataforma", "/lojas", "/loja casa-forte", "/piloto casa-forte", "/admin_conectar", "/excluir_loja casa-forte"):
+    msg(CLI5, cmd)
+    ok("Acesso negado" in textos(CLI5)[-1], "não admin recebe 'Acesso negado' em " + cmd.split()[0])
+cb(CLI5, "adm:del:casa-forte")
+ok(db.tenant("casa-forte") and "Acesso negado" in textos(CLI5)[-1], "botão de excluir loja recusado para não admin")
+msg(CLI5, "/admin ERRADO")
+ok("código inválido" in textos(CLI5)[-1] and CLI5 not in db.d["plataforma"]["admins"], "/admin com código errado é negado")
+for _ in range(5):
+    msg(ATAQ, "/admin ADM000000000000")
+msg(ATAQ, "/admin " + bot.admin_cfg["codigo"])
+ok(ATAQ not in db.d["plataforma"]["admins"] and "Muitas tentativas" in textos(ATAQ)[-1], "5 tentativas erradas bloqueiam até o código certo")
+ok(os.path.exists(os.path.join(os.environ["ATENDE_DATA"], "admin.json")) and bot.admin_cfg["codigo"].startswith("ADM"), "código admin gerado na 1ª execução em data/admin.json")
+antes_n = len(tg.saida)
+msg(ADMIN, "/admin " + bot.admin_cfg["codigo"].lower())
+ok(ADMIN in db.d["plataforma"]["admins"] and "administrador da plataforma" in textos(ADMIN)[-1], "/admin com código certo vira super-admin")
+ok(any(m == "deleteMessage" for m, p in tg.saida[antes_n:]), "mensagem com o código é apagada do chat")
+msg(ADMIN, "/plataforma")
+ok("Plataforma Atende AI" in textos(ADMIN)[-1] and "Faturamento intermediado" in textos(ADMIN)[-1], "/plataforma mostra KPIs globais")
+msg(ADMIN, "/lojas")
+ok(all(x in textos(ADMIN)[-1] for x in ("oficina-pista-livre", t2["id"], "loja-exemplo-online")), "/lojas lista todas as lojas")
+msg(ADMIN, "/loja " + t2["id"])
+ok("Saúde do piloto" in textos(ADMIN)[-1] and "Recentes" in textos(ADMIN)[-1], "/loja mostra KPIs, saúde do piloto e pedidos recentes")
+msg(ADMIN, "/piloto " + t2["id"])
+ok(t2["piloto"] is True and t2["pilotoInfo"]["inicio"] and "/antes" in textos(DONO2)[-1], "/piloto marca a loja e convida o dono a preencher o antes")
+msg(DONO2, "/antes resposta 2h vendas R$ 8.000 pedidos 40")
+ok(t2["pilotoInfo"]["antes"] == {**t2["pilotoInfo"]["antes"], "respostaMin": 120, "vendasMes": 8000, "pedidosMes": 40}, "dono preenche o antes (resposta, vendas, pedidos)")
+msg(ADMIN, "/admin_conectar")
+ok("Acesso negado" not in textos(ADMIN)[-1], "/admin_conectar responde ao admin")
+
+# API admin
+for nome_h, h in (("sem chave", {}), ("chave errada", {"X-Atende-Admin": "errada"}), ("chave de loja", {"X-Atende-Admin": t["chave_api"]})):
+    try:
+        urllib.request.urlopen(urllib.request.Request(base + "/api/admin/plataforma", headers=h)); ok(False, "API admin deveria recusar")
+    except urllib.error.HTTPError as e:
+        ok(e.code == 401, "API admin recusa " + nome_h)
+req = urllib.request.Request(base + "/api/admin/export", headers={"X-Atende-Admin": bot.admin_cfg["chave_api"], "Origin": "https://guilhermeromio-netto-prog.github.io"})
+with urllib.request.urlopen(req) as resp:
+    ad = json.load(resp)
+    ok("X-Atende-Admin" in (resp.headers.get("Access-Control-Allow-Headers") or "") or resp.headers.get("Access-Control-Allow-Origin"), "CORS na API admin")
+ok(ad["plataforma"]["lojas"] == len(db.d["tenants"]) and any(x["id"] == t2["id"] and x["piloto"] and x["saude"]["antes"]["vendasMes"] == 8000 for x in ad["lojas"]), "API admin exporta lojas, piloto e antes/depois")
+ok("Ana Souza" not in json.dumps(ad, ensure_ascii=False) and "chat" not in ad["lojas"][0]["recentes"][0], "API admin sem dados pessoais dos clientes")
+
+# exclusão pelo cliente
+msg(CLI, "/excluir_dados"); tocar(CLI, "Apagar meus dados"); tocar(CLI, "Sim, apagar")
+dump = json.dumps(db.d, ensure_ascii=False)
+ok("Ana Souza" not in dump and "ABC1D23" not in dump and str(CLI) not in db.d["usuarios"], "cliente apagou nome, placa e cadastro")
+ok(tk["cliente"].startswith("Cliente (dados removidos)") and tk["chat"] == [] and tk["chat_id"] is None and tk["anonimizadoEm"] and tk["total"] == {"min": 250, "max": 460},
+   "pedidos do cliente anonimizados (status e valor mantidos)")
+ok(any("LGPD" in x for x in textos(DONO)), "dono avisado da exclusão")
+
+# exclusão da loja pelo dono → admin
+msg(DONO2, "/excluir_dados"); tocar(DONO2, "Pedir exclusão da loja")
+ok(t2.get("exclusao") and any("Pedido de exclusão de loja" in x for x in textos(ADMIN)), "pedido de exclusão da loja notifica o admin")
+tocar(ADMIN, "Excluir agora")
+ok(not db.tenant(t2["id"]) and not any(x["tenant"] == t2["id"] for x in db.d["tickets"]) and not db.user(DONO2)["dono_de"], "admin excluiu a loja e os pedidos")
+ok("foram excluídos" in textos(DONO2)[-1], "dono avisado da exclusão da loja")
 srv.shutdown()
 print("\nTodos os testes passaram.")
