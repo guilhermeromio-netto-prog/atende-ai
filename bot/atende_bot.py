@@ -24,6 +24,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import motor as M  # noqa: E402
+from ecommerce import EcomMixin  # noqa: E402
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 DATA = os.environ.get("ATENDE_DATA") or os.path.join(AQUI, "data")
@@ -87,10 +88,13 @@ class DB:
         self.lock = threading.RLock()
         if os.path.exists(path):
             self.d = json.load(open(path, encoding="utf-8"))
+            if migrar(self.d):
+                self.save()
         else:
             self.d = {"versao": 1, "offset": 0, "seq": 3000, "tenants": {}, "usuarios": {}, "tickets": []}
             for slug, seg in (("oficina-pista-livre", "oficina"), ("casa-forte", "loja")):
                 self.d["tenants"][slug] = novo_tenant(slug, M.DADOS["segmentos"][seg]["negocio"]["nome"], seg, True)
+            migrar(self.d)
             self.save()
 
     def save(self):
@@ -121,7 +125,26 @@ def novo_tenant(slug, nome, seg, exemplo=True):
             "horario": json.loads(json.dumps(sd["negocio"]["horario"])),
             "catalogo": json.loads(json.dumps(sd["catalogo"])) if exemplo else [],
             "automacoes": json.loads(json.dumps(M.DADOS["automacoes"][seg])),
-            "sla": json.loads(json.dumps(M.DADOS["sla"][seg]))}
+            "sla": json.loads(json.dumps(M.DADOS["sla"][seg])), "metricas": {"carrinhos": 0, "abandonados": 0},
+            **({"politicas": M.politicas_padrao()} if seg == "ecommerce" else {})}
+
+
+def migrar(d):
+    """Migração segura (idempotente): só ACRESCENTA campos/negócios, nunca altera os existentes."""
+    mudou = False
+    if "loja-exemplo-online" not in d["tenants"]:
+        t = novo_tenant("loja-exemplo-online", M.DADOS["segmentos"]["ecommerce"]["negocio"]["nome"], "ecommerce", True)
+        t["exemplo"] = True
+        d["tenants"]["loja-exemplo-online"] = t
+        mudou = True
+    for t in d["tenants"].values():
+        if "metricas" not in t:
+            t["metricas"] = {"carrinhos": 0, "abandonados": 0}; mudou = True
+        if t["segmento"] == "ecommerce" and "politicas" not in t:
+            t["politicas"] = M.politicas_padrao(); mudou = True
+    if d.get("versao", 1) < 2:
+        d["versao"] = 2; mudou = True
+    return mudou
 
 
 def slugify(s):
@@ -179,14 +202,14 @@ class IA:
 CMD_CLIENTE = [("start", "Começar o atendimento"), ("trocar", "Escolher outro negócio"), ("nova", "Nova conversa"),
                ("dono", "Sou dono de um negócio"), ("ajuda", "Como funciona")]
 CMD_DONO = [("painel", "Resumo e indicadores"), ("pedidos", "Pedidos em aberto"), ("catalogo", "Ver catálogo"),
-            ("horario", "Ver horário"), ("link", "Link para seus clientes"), ("conectar", "Ligar o dashboard web"),
+            ("politicas", "Frete, pagamento e trocas (loja virtual)"), ("horario", "Ver horário"), ("link", "Link para seus clientes"), ("conectar", "Ligar o dashboard web"),
             ("codigo", "Código para outro atendente"), ("cliente", "Testar como cliente"), ("dono", "Voltar ao modo dono"),
             ("ajuda", "Comandos")]
 ETAPA_TXT = {"problema": "entendendo o problema", "pergunta": "coletando dados", "orcado": "orçamento enviado",
              "agendar": "escolhendo horário", "fim": "agendado", "humano": "com atendente"}
 
 
-class Bot:
+class Bot(EcomMixin):
     def __init__(self, tg: Telegram, db: DB, ia: IA):
         self.tg, self.db, self.ia = tg, db, ia
 
@@ -196,13 +219,15 @@ class Bot:
 
     def novo_id(self, t):
         self.db.d["seq"] += 1
-        return ("OF-" if t["segmento"] == "oficina" else "LJ-") + str(self.db.d["seq"])
+        return {"oficina": "OF-", "ecommerce": "EC-"}.get(t["segmento"], "LJ-") + str(self.db.d["seq"])
 
     def avisar_donos(self, tenant, texto, teclado=None):
         for cid in tenant.get("donos", []):
             self.tg.send(cid, texto, teclado)
 
     def resumo_ticket(self, t, tenant):
+        if tenant["segmento"] == "ecommerce":
+            return self.ecom_resumo_ticket(t, tenant)
         s = M.sla_estado(t)
         icone = {"ok": "🟢", "atencao": "🟡", "erro": "🔴"}[s["cls"]]
         rot = M.DADOS["segmentos"][tenant["segmento"]]["rotulos"]
@@ -226,6 +251,8 @@ class Bot:
         return "\n".join(partes)
 
     def botoes_ticket(self, t):
+        if t.get("seg") == "ecommerce":
+            return self.ecom_botoes_ticket(t)
         b = []
         prox = M.proximo_status(t)
         if prox:
@@ -305,7 +332,17 @@ class Bot:
         if cmd == "pedidos":
             return self.cmd_pedidos(cid, tenant)
         if cmd == "catalogo":
-            return self.cmd_catalogo(cid, tenant)
+            return self.ecom_catalogo(cid, tenant) if tenant["segmento"] == "ecommerce" else self.cmd_catalogo(cid, tenant)
+        if cmd == "politicas":
+            if tenant["segmento"] != "ecommerce":
+                return self.tg.send(cid, "Políticas de frete, pagamento e troca são da Loja virtual. Seu negócio usa catálogo de serviços: /catalogo")
+            return self.tg.send(cid, f"📜 <b>Políticas de {E(tenant['nome'])}</b>\n" + E(M.texto_politicas(self.ecom_pol(tenant))) +
+                                f"\nChave Pix: {E(self.ecom_pol(tenant)['pagamento'].get('pixChave') or 'não cadastrada (o cliente é avisado que a loja envia os dados)')}"
+                                f"\nLink do cartão: {E(self.ecom_pol(tenant)['pagamento'].get('linkCartao') or 'não cadastrado')}\n\n"
+                                "Para mudar, escreva por exemplo:\n<code>Frete grátis acima de R$ 199</code>\n<code>Frete fixo R$ 19,90</code>\n"
+                                "<code>Frete SP R$ 15 2 dias, Sudeste R$ 22 4 dias, outros R$ 35 8 dias</code>\n<code>Envio em 1 dia útil</code>\n"
+                                "<code>Pix com 5% de desconto, cartão em até 6x</code>\n<code>Chave pix: sua-chave-aqui</code>\n<code>Link do cartão: https://...</code>\n"
+                                "<code>Troca em até 7 dias por arrependimento</code>")
         if cmd == "remover":
             return self.cmd_remover(cid, tenant, arg)
         if cmd == "horario":
@@ -319,13 +356,17 @@ class Bot:
         return self.tg.send(cid, "Não conheço esse comando. Veja /ajuda.")
 
     def cmd_ajuda(self, cid, u):
+        td = self.db.tenant(u.get("tenant_dono") or (u.get("dono_de") or [""])[0]) if u.get("dono_de") else None
+        if td and u["modo"] == "dono" and td["segmento"] == "ecommerce":
+            return self.tg.send(cid, "<b>Modo dono · Loja virtual</b>\nEscreva naturalmente:\n• <code>Fone bluetooth R$ 89 estoque 12 entrega 3 dias</code>\n• <code>Frete grátis acima de R$ 199</code>\n• <code>Pix com 5% de desconto, cartão em até 6x</code>\n• <code>Chave pix: sua-chave</code>\n\n" +
+                                "\n".join(f"/{c} — {d}" for c, d in CMD_DONO) + "\n/remover N — remove o produto N")
         if u.get("dono_de") and u["modo"] == "dono":
             return self.tg.send(cid, "<b>Modo dono</b>\nEscreva naturalmente para cadastrar:\n• <code>Troca de óleo R$ 180 1h</code>\n• <code>Pastilha de freio peças R$ 160 a 320 mão de obra R$ 120 1h30</code>\n• <code>Seg a sex 8h às 18h; sábado 8h às 12h</code>\n• <code>Minha oficina se chama Auto Center Silva</code>\n\n" +
                                 "\n".join(f"/{c} — {d}" for c, d in CMD_DONO) + "\n/remover N — remove o item N do catálogo")
         return self.tg.send(cid, "<b>Como funciona</b>\nConte o problema do seu jeito (ex.: “barulho ao frear”). Eu pergunto o que falta, monto o orçamento com os preços do negócio e você aprova com um toque.\n\n/nova — recomeçar\n/trocar — escolher outro negócio\n/dono — sou dono de um negócio\n\n<i>Assistente automático em modo de teste. Os valores são estimativas do catálogo do negócio.</i>")
 
     def escolher_negocio(self, cid, texto):
-        bts = [(("🔧 " if t["segmento"] == "oficina" else "🏬 ") + t["nome"], f"t:{slug}") for slug, t in self.db.d["tenants"].items()]
+        bts = [({"oficina": "🔧 ", "ecommerce": "🛒 "}.get(t["segmento"], "🏬 ") + t["nome"], f"t:{slug}") for slug, t in self.db.d["tenants"].items()]
         return self.tg.send(cid, texto, linhas(bts[:20]))
 
     def cmd_dono(self, cid, u, arg):
@@ -338,7 +379,8 @@ class Bot:
             u["modo"] = "dono"
             return self.cmd_painel(cid, u)
         livres = [t for t in self.db.d["tenants"].values() if not t["donos"]]
-        bts = [(f"Assumir: {t['nome']} ({'oficina' if t['segmento'] == 'oficina' else 'loja'}, exemplo)", f"claim:{t['id']}") for t in livres]
+        tipos = {"oficina": "oficina", "ecommerce": "loja virtual"}
+        bts = [(f"Assumir: {t['nome']} ({tipos.get(t['segmento'], 'loja')}, exemplo)", f"claim:{t['id']}") for t in livres]
         bts.append(("➕ Criar meu negócio do zero", "novo"))
         return self.tg.send(cid, "👋 <b>Área do dono</b>\nVocê pode assumir um negócio de exemplo (já vem com catálogo, bom para testar) ou criar o seu.\n\nSe outra pessoa já é dona e te passou um código, envie <code>/dono CÓDIGO</code>.", linhas(bts))
 
@@ -349,6 +391,14 @@ class Bot:
             u["dono_de"].append(t["id"])
         u["tenant_dono"] = t["id"]; u["modo"] = "dono"
         self.comandos_dono(cid)
+        if t["segmento"] == "ecommerce":
+            self.tg.send(cid, f"✅ Você agora {'atende' if coadmin else 'é dono(a) de'} <b>{E(t['nome'])}</b> 🛒\n\n"
+                              f"1️⃣ Cadastre produtos escrevendo, ex.: <code>Fone bluetooth R$ 89 estoque 12 entrega 3 dias</code>\n"
+                              f"2️⃣ Ajuste frete, pagamento e trocas: /politicas (ex.: <code>Frete grátis acima de R$ 199</code>, <code>Chave pix: sua-chave</code>)\n"
+                              f"3️⃣ Mande este link para seus clientes: {self.link(t['id'])}\n"
+                              f"4️⃣ Cada pedido chega aqui com botões: confirmar pagamento, informar rastreio e enviar.\n\n"
+                              f"Teste você mesmo como cliente: /cliente · Comandos: /ajuda")
+            return self.ecom_catalogo(cid, t)
         self.tg.send(cid, f"✅ Você agora {'atende' if coadmin else 'é dono(a) de'} <b>{E(t['nome'])}</b>.\n\n"
                           f"1️⃣ Cadastre ou ajuste serviços escrevendo, ex.: <code>Alinhamento R$ 150 1h</code>\n"
                           f"2️⃣ Mande este link para seus clientes: {self.link(t['id'])}\n"
@@ -363,11 +413,21 @@ class Bot:
         u["aguardando"] = None; u["novo_nome"] = nome
         return self.tg.send(cid, f"Ótimo: <b>{E(nome)}</b>. Que tipo de negócio é?", linhas([
             ("🔧 Oficina (começar com catálogo de exemplo)", "seg:oficina:ex"), ("🔧 Oficina (catálogo vazio)", "seg:oficina:vazio"),
-            ("🏬 Loja (começar com catálogo de exemplo)", "seg:loja:ex"), ("🏬 Loja (catálogo vazio)", "seg:loja:vazio")]))
+            ("🏬 Loja (começar com catálogo de exemplo)", "seg:loja:ex"), ("🏬 Loja (catálogo vazio)", "seg:loja:vazio"),
+            ("🛒 Loja virtual (catálogo de exemplo)", "seg:ecommerce:ex"), ("🛒 Loja virtual (catálogo vazio)", "seg:ecommerce:vazio")]))
 
     def cmd_painel(self, cid, u):
         t = self.db.tenant(u.get("tenant_dono") or u["dono_de"][0])
         k = kpis(t, [x for x in self.db.d["tickets"] if x["tenant"] == t["id"]])
+        if t["segmento"] == "ecommerce":
+            return self.tg.send(cid, f"📊 <b>{E(t['nome'])}</b> · painel da loja virtual\n"
+                                     f"Pedidos: <b>{k['pedidos']}</b> · pagos: <b>{k['pagos']}</b> · aguardando pagamento: {k['aguardando_pagamento']}\n"
+                                     f"Faturamento (pagos): <b>{M.brl_c(k['faturamento'])}</b> · ticket médio: <b>{M.brl_c(k['ticket_medio'])}</b>\n"
+                                     f"Conversão carrinho → pago: <b>{k['conversao']}</b> · carrinhos abandonados: {k['abandonados']}\n"
+                                     f"Envio no prazo: <b>{k['sla_cumprido']}</b> · em risco agora: {k['em_risco']}\n"
+                                     f"1ª resposta média: <b>{k['tempo_resposta']}</b> · trocas/devoluções: {k['trocas']}\n"
+                                     f"Avaliação média: <b>{k['avaliacao']}</b>\n\n"
+                                     f"Pedidos: /pedidos · Produtos: /catalogo · Políticas: /politicas · Link: /link · Dashboard web: /conectar")
         txt = (f"📊 <b>{E(t['nome'])}</b> · painel\n"
                f"Atendimentos: <b>{k['atendimentos']}</b> ({k['automaticos']} sem atendente)\n"
                f"Taxa de aprovação: <b>{k['taxa_aprovacao']}</b>\n"
@@ -379,7 +439,7 @@ class Bot:
         return self.tg.send(cid, txt)
 
     def cmd_pedidos(self, cid, t):
-        abertos = [x for x in self.db.d["tickets"] if x["tenant"] == t["id"] and x["status"] != "Entregue"]
+        abertos = [x for x in self.db.d["tickets"] if x["tenant"] == t["id"] and x["status"] not in ("Entregue", "Resolvido")]
         if not abertos:
             return self.tg.send(cid, f"Nenhum pedido em aberto. Mande o link {self.link(t['id'])} para um cliente (ou teste com /cliente).")
         abertos.sort(key=lambda x: x["prazo"])
@@ -421,6 +481,10 @@ class Bot:
     # ---------------------------------------------------------------- dono: texto livre
     def texto_dono(self, cid, u, txt):
         t = self.db.tenant(u.get("tenant_dono") or u["dono_de"][0])
+        if u.get("aguardando_rastreio"):
+            tk = self.db.ticket(u.pop("aguardando_rastreio"))
+            if tk and tk["tenant"] in u.get("dono_de", []):
+                return self.enviar_pedido(cid, tk, self.db.tenant(tk["tenant"]), "" if re.match(r"^(sem|nao|não|-)\b", txt.strip().lower()) else txt.strip()[:60])
         if u.get("respondendo"):
             tk = self.db.ticket(u["respondendo"])
             u["respondendo"] = None
@@ -430,6 +494,8 @@ class Bot:
                     tk["respostaHumanaSeg"] = round((M.agora_ms() - tk.get("humanoEm", tk["criado"])) / 1000)
                 self.tg.send(tk["chat_id"], f"👤 <b>{E(t['nome'])}</b> (atendente):\n{E(txt)}")
                 return self.tg.send(cid, f"✉️ Enviado para {E(tk.get('cliente') or 'o cliente')} ({tk['id']}).")
+        if t["segmento"] == "ecommerce":
+            return self.ecom_texto_dono(cid, u, t, txt)
         res = M.parse_dono(txt, t["segmento"])
         out = []
         if res["nome"]:
@@ -460,6 +526,8 @@ class Bot:
         slug = u.get("tenant") or next(iter(self.db.d["tenants"]))
         u["tenant"] = slug
         t = self.db.tenant(slug)
+        if t["segmento"] == "ecommerce":
+            return self.ecom_iniciar(cid, u, t)
         sd = M.DADOS["segmentos"][t["segmento"]]
         u["conv"] = {"tenant": slug, "etapa": "problema", "campo": None, "dados": {}, "intent": None, "confianca": 0, "ticket": None}
         quem = "com o seu carro" if t["segmento"] == "oficina" else "que você precisa"
@@ -475,6 +543,14 @@ class Bot:
                 return
         conv = u["conv"]
         t = self.db.tenant(conv["tenant"])
+        if t["segmento"] == "ecommerce":
+            if conv.get("etapa") == "humano" and not valor:
+                tk = self.db.ticket(conv.get("ticket") or "")
+                if tk and tk["status"] not in ("Entregue", "Resolvido"):
+                    tk.setdefault("chat", []).append({"de": "cliente", "texto": txt, "ts": M.agora_ms()})
+                    self.avisar_donos(t, f"💬 <b>{E(tk.get('cliente') or 'Cliente')}</b> ({tk['id']}) escreveu:\n“{E(txt)}”", [[("💬 Responder", f"rp:{tk['id']}"), ("📄 Ver", f"vp:{tk['id']}")]])
+                    return self.tg.send(cid, f"Recebido! Passei para a equipe ({tk['id']}). Para voltar ao menu: /nova")
+            return self.ecom_texto(cid, u, t, txt, valor)
         sd = M.DADOS["segmentos"][t["segmento"]]
         tk = self.db.ticket(conv["ticket"]) if conv.get("ticket") else None
         if tk:
@@ -686,6 +762,14 @@ class Bot:
         except Exception:
             pass
         # dono
+        if dado.startswith("rs:"):
+            tk = self.db.ticket(dado[3:])
+            if not tk or tk["tenant"] not in u.get("dono_de", []):
+                return self.tg.send(cid, "Esse pedido não é de um negócio seu.")
+            if M.proximo_status(tk) != "Enviado":
+                return self.tg.send(cid, f"{tk['id']} está como {E(tk['status'])}; o envio vem depois de Separando.", self.botoes_ticket(tk))
+            u["aguardando_rastreio"] = tk["id"]; u["modo"] = "dono"
+            return self.tg.send(cid, f"📦 Digite o <b>código de rastreio</b> do pedido {tk['id']} (ex.: <code>BR123456789BR</code>).\nSe for entrega sem rastreio, escreva <code>sem</code>.")
         if dado.startswith(("av:", "rp:", "vp:")):
             tk = self.db.ticket(dado[3:])
             if not tk or tk["tenant"] not in u.get("dono_de", []):
@@ -698,7 +782,15 @@ class Bot:
                 return self.tg.send(cid, f"✍️ Escreva agora a mensagem para <b>{E(tk.get('cliente') or 'o cliente')}</b> ({tk['id']}). A próxima mensagem que você mandar vai direto para ele.")
             prox = M.proximo_status(tk)
             if not prox:
-                return self.tg.send(cid, f"{tk['id']} já foi entregue.")
+                return self.tg.send(cid, f"{tk['id']} já foi {'resolvido' if tk['status'] == 'Resolvido' else 'entregue'}.")
+            if tk.get("seg") == "ecommerce" and prox == "Enviado":
+                u["aguardando_rastreio"] = tk["id"]; u["modo"] = "dono"
+                return self.tg.send(cid, f"📦 Digite o <b>código de rastreio</b> do pedido {tk['id']} (ou <code>sem</code>).")
+            if tk.get("seg") == "ecommerce" and prox == "Pago":
+                for i in tk.get("itens", []):
+                    c = next((x for x in t["catalogo"] if x["id"] == i["id"]), None)
+                    if c:
+                        c["estoque"] = max(0, int(c.get("estoque", 0)) - int(i.get("qtd", 1)))
             esperado = cq["message"].get("text", "")
             if f"Avançar para {prox}" not in json.dumps(cq["message"].get("reply_markup", {}), ensure_ascii=False) and esperado:
                 pass  # botão antigo: avança mesmo assim a partir do status atual
@@ -711,6 +803,8 @@ class Bot:
                     if e["regra"] == "lembrete" and e["estado"] == "agendado":
                         e["estado"] = "aguardando_horario"
             extra = " · pós-venda com avaliação sai em %d min" % POSVENDA_MIN if prox == "Entregue" else ""
+            if prox == "Pago":
+                extra += " · estoque atualizado"
             return self.tg.send(cid, f"✔️ {tk['id']} → <b>{prox}</b>. {len(saem)} mensagem(ns) automática(s) enviada(s) ao cliente{extra}.\n\n" + self.resumo_ticket(tk, t), self.botoes_ticket(tk))
         if dado.startswith("claim:"):
             t = self.db.tenant(dado[6:])
@@ -765,7 +859,7 @@ class Bot:
                     continue
                 s = M.sla_estado(tk, agora)
                 al = tk.setdefault("alertas", {})
-                if s["ativo"] and tk["status"] != "Novo":
+                if s["ativo"] and tk["status"] != "Aguardando pagamento" and (tk["status"] != "Novo" or tk.get("tipo") in ("troca", "atendimento")):
                     if s["cls"] == "atencao" and not al.get("atencao"):
                         al["atencao"] = agora; mudou = True
                         self.avisar_donos(t, f"🟡 <b>SLA em atenção</b>: {tk['id']} ({E(tk['status'])}) · {s['texto']}.", self.botoes_ticket(tk))
@@ -781,12 +875,53 @@ class Bot:
                         if e["regra"] == "posvenda":
                             texto = re.sub(r"De 0 a 10[^?]*\?", "Que nota você dá de 1 a 5?", texto)
                         self.tg.send(tk["chat_id"], "🤖 " + E(texto), kb)
+            if self.ecom_vigiar_carrinhos(agora):
+                mudou = True
             if mudou:
                 self.db.save()
 
+    def enviar_pedido(self, cid, tk, t, codigo):
+        if M.proximo_status(tk) != "Enviado":
+            return self.tg.send(cid, f"{tk['id']} está como {E(tk['status'])}.", self.botoes_ticket(tk))
+        tk["rastreio"] = codigo
+        saem = M.mudar_status(tk, t, "Enviado", posvenda_atraso_min=POSVENDA_MIN)
+        for ev in saem:
+            if tk.get("chat_id"):
+                self.tg.send(tk["chat_id"], "🤖 " + E(ev["texto"]))
+        return self.tg.send(cid, f"✔️ {tk['id']} → <b>Enviado</b>" + (f" · rastreio {E(codigo)}" if codigo else " · sem rastreio") +
+                            f". {len(saem)} mensagem(ns) automática(s) enviada(s) ao cliente.\n\n" + self.resumo_ticket(tk, t), self.botoes_ticket(tk))
+
 
 # ============================================================ KPIs / exportação
+def kpis_ecom(t, tickets):
+    passou = lambda x, st: any(h["status"] == st for h in x.get("historico", []))  # noqa: E731
+    ped = [x for x in tickets if x.get("tipo", "pedido") == "pedido"]
+    pagos = [x for x in ped if passou(x, "Pago")]
+    fat = sum(x.get("totalFinal", 0) for x in pagos)
+    met = t.get("metricas", {})
+    carr = max(met.get("carrinhos", 0), len(ped))
+    env = [x for x in pagos if x.get("prontoEm")]
+    no_prazo = [x for x in env if x["prontoEm"] <= x["prazo"]]
+    estour = [x for x in pagos if not x.get("prontoEm") and x["prazo"] < M.agora_ms()]
+    den = len(env) + len(estour)
+    notas = [x["nps5"] for x in tickets if x.get("nps5")]
+    resp = sum(x.get("tempoRespostaSeg", 0) for x in tickets) / len(tickets) if tickets else 0
+    risco = [x for x in tickets if x["status"] != "Aguardando pagamento" and M.sla_estado(x)["ativo"] and M.sla_estado(x)["cls"] != "ok"]
+    return {"negocio": t["nome"], "segmento": "ecommerce", "atendimentos": len(tickets), "automaticos": len([x for x in tickets if not x.get("humano")]),
+            "pedidos": len(ped), "pagos": len(pagos), "aguardando_pagamento": len([x for x in ped if x["status"] == "Aguardando pagamento"]),
+            "faturamento": round(fat, 2), "ticket_medio": round(fat / len(pagos), 2) if pagos else 0,
+            "carrinhos": carr, "abandonados": met.get("abandonados", 0),
+            "conversao": f"{round(len(pagos) / carr * 100)}%" if carr else "—",
+            "trocas": len([x for x in tickets if x.get("tipo") == "troca"]),
+            "sla_cumprido": f"{round(len(no_prazo) / den * 100)}%" if den else "—", "em_risco": len(risco),
+            "tempo_resposta": (f"{round(resp)} s" if resp < 60 else f"{resp / 60:.1f} min".replace(".", ",")) if tickets else "—",
+            "avaliacao": f"{sum(notas) / len(notas):.1f}/5".replace(".", ",") if notas else "—",
+            "taxa_aprovacao": "—", "previsto": round(sum(x.get("totalFinal", 0) for x in ped if x["status"] == "Aguardando pagamento"), 2), "realizado": round(fat, 2)}
+
+
 def kpis(t, tickets):
+    if t["segmento"] == "ecommerce":
+        return kpis_ecom(t, tickets)
     passou = lambda x, st: any(h["status"] == st for h in x.get("historico", []))  # noqa: E731
     orc = [x for x in tickets if passou(x, "Orçado")]
     apr = [x for x in tickets if passou(x, "Aprovado")]
@@ -876,6 +1011,7 @@ def criar_api(bot: Bot, ia: IA):
                     return self._json(200, {"negocio": neg, "catalogo": t["catalogo"]})
                 if url.path == "/api/export":
                     return self._json(200, {"negocio": neg, "catalogo": t["catalogo"], "automacoes": t["automacoes"], "sla": t["sla"],
+                                            "politicas": t.get("politicas"), "metricas": t.get("metricas", {}),
                                             "pedidos": [ticket_publico(x) for x in tks], "kpis": kpis(t, tks), "geradoEm": M.agora_ms()})
             return self._json(404, {"erro": "rota desconhecida"})
 
@@ -890,8 +1026,8 @@ TG: Telegram | None = None
 
 def configurar(tg: Telegram):
     tg.call("setMyCommands", commands=[{"command": c, "description": d} for c, d in CMD_CLIENTE])
-    tg.call("setMyDescription", description="Atendimento automático de oficinas e lojas (modo de teste). Conte o problema do seu jeito, receba o orçamento com os preços do negócio e aprove com um toque. Donos: envie /dono para cadastrar serviços e acompanhar pedidos.")
-    tg.call("setMyShortDescription", short_description="Orçamento automático para oficinas e lojas · Atende AI (teste) · byGui")
+    tg.call("setMyDescription", description="Atendimento automático de oficinas, lojas e lojas virtuais (modo de teste). Conte o que precisa do seu jeito: orçamento, produtos, frete, pedido ou troca. Donos: envie /dono para cadastrar serviços/produtos e acompanhar pedidos.")
+    tg.call("setMyShortDescription", short_description="Atendimento automático para oficinas, lojas e lojas virtuais · Atende AI (teste) · byGui")
 
 
 def main():

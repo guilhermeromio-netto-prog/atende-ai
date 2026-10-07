@@ -8,6 +8,7 @@ import urllib.request
 os.environ["ATENDE_DATA"] = tempfile.mkdtemp(prefix="atende-test-")
 os.environ["ATENDE_API_PORT"] = "8799"
 os.environ["ATENDE_POSVENDA_MIN"] = "0"
+os.environ["ATENDE_SEM_REDE"] = "1"  # sem consulta ao ViaCEP nos testes
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import atende_bot as B  # noqa: E402
 import motor as M  # noqa: E402
@@ -113,6 +114,85 @@ msg(CLI, "/start casa-forte"); msg(CLI, "Quero pintar meu quarto"); msg(CLI, "Bi
 tl = db.d["tickets"][0]
 ok(tl["total"] == {"min": 380, "max": 560} and tl["bairro"] == "Retirada na loja", "loja: retirada sem frete")
 
+# ===================== Loja virtual (ecommerce)
+DONO2, CLI2, CLI3 = 333, 444, 555
+ok(db.tenant("loja-exemplo-online") and db.tenant("loja-exemplo-online")["segmento"] == "ecommerce", "loja de exemplo online semeada")
+msg(DONO2, "/dono"); tocar(DONO2, "Criar meu negócio"); msg(DONO2, "Loja do Mano")
+tocar(DONO2, "Loja virtual (catálogo vazio)")
+t2 = next(x for x in db.d["tenants"].values() if x["nome"] == "Loja do Mano")
+ok(t2["segmento"] == "ecommerce" and t2["catalogo"] == [] and t2.get("politicas"), "dono criou loja virtual vazia com políticas padrão")
+msg(DONO2, "Fone bluetooth R$ 89 estoque 12 entrega 3 dias")
+fone = next((c for c in t2["catalogo"] if c["nome"] == "Fone bluetooth"), None)
+ok(fone and fone["preco"] == 89 and fone["estoque"] == 12 and fone["envioDias"] == 3, "produto cadastrado pelo chat (preço, estoque, envio)")
+msg(DONO2, "Frete grátis acima de R$ 150. Pix com 10% de desconto, cartão em até 3x. Chave pix: mano@exemplo.com")
+pg = t2["politicas"]["pagamento"]
+ok(t2["politicas"]["frete"]["gratisAcima"] == 150 and pg["pixDescontoPct"] == 10 and pg["parcelas"] == 3 and pg["pixChave"] == "mano@exemplo.com", "políticas de frete/pagamento/Pix pelo chat")
+msg(DONO2, "/politicas")
+ok("Frete grátis acima de R$ 150,00" in textos(DONO2)[-1], "/politicas mostra o que foi cadastrado")
+msg(DONO2, "/link")
+ok(t2["id"] in textos(DONO2)[-1], "/link com deep link da loja")
+
+msg(CLI2, "/start " + t2["id"])
+msg(CLI2, "vcs tem fone blutooth?")
+ok(any(b["callback_data"] == "add:" + fone["id"] for l in ultimo_teclado(CLI2) for b in l), "busca tolerante a erro achou o produto")
+tocar(CLI2, "add:" + fone["id"]); tocar(CLI2, "➕ 1")
+conv = db.user(CLI2)["conv"]
+ok(conv["carrinho"] == {fone["id"]: 2}, "carrinho com quantidade 2")
+tocar(CLI2, "Fechar pedido"); msg(CLI2, "Carlos Lima"); msg(CLI2, "01310-100"); msg(CLI2, "Av Paulista 1000 ap 12"); tocar(CLI2, "pg:pix")
+resumo = textos(CLI2)[-1]
+ok("Total: R$ 160,20" in resumo and "grátis" in resumo and "−R$ 17,80" in resumo, "resumo itemizado: frete grátis + desconto Pix (R$ 160,20)")
+tocar(CLI2, "Confirmar pedido")
+pe = db.d["tickets"][0]
+ok(pe["id"].startswith("EC-") and pe["status"] == "Aguardando pagamento" and pe["totalFinal"] == 160.2, "pedido criado aguardando pagamento")
+ok(any("mano@exemplo.com" in x for x in textos(CLI2)), "cliente recebeu a chave Pix do lojista")
+ok(any("Novo pedido aguardando pagamento" in x for x in textos(DONO2)), "lojista notificado do pedido")
+tocar(CLI2, "Já paguei")
+ok(any("informou que pagou" in x for x in textos(DONO2)), "‘Já paguei’ avisou o lojista")
+tocar(DONO2, "Confirmar pagamento")
+ok(pe["status"] == "Pago" and fone["estoque"] == 10, "lojista confirmou pagamento e estoque baixou (12→10)")
+ok(any("Pagamento confirmado" in x or "confirmado" in x.lower() for x in textos(CLI2)[-2:]), "cliente recebeu confirmação de pagamento")
+tocar(DONO2, "Avançar para Separando")
+ok(pe["status"] == "Separando", "pedido em separação")
+tocar(DONO2, "Informar rastreio"); msg(DONO2, "BR123456789BR")
+ok(pe["status"] == "Enviado" and pe["rastreio"] == "BR123456789BR" and pe.get("prontoEm"), "rastreio informado e pedido enviado")
+ok(any("BR123456789BR" in x for x in textos(CLI2)), "cliente recebeu o código de rastreio")
+msg(CLI2, "cade meu pedido " + pe["id"].lower())
+ok("BR123456789BR" in textos(CLI2)[-1] and "Enviado" in textos(CLI2)[-1], "cliente consultou rastreio pelo número")
+msg(CLI2, "quanto é o frete pro cep 30140-071?")
+ok("Sudeste" in textos(CLI2)[-1] and "R$ 21,90" in textos(CLI2)[-1], "frete por CEP (região Sudeste)")
+msg(CLI2, "quero trocar, veio com defeito"); tocar(CLI2, "tr:" + pe["id"]); tocar(CLI2, "Defeito")
+tr = db.d["tickets"][0]
+ok(tr["tipo"] == "troca" and tr["pedidoRef"] == pe["id"] and tr["motivo"] == "Defeito", "troca aberta com motivo e pedido")
+ok(any("troca/devolução" in x for x in textos(DONO2)), "lojista notificado da troca")
+tocar(DONO2, "Avançar para Em análise")
+ok(tr["status"] == "Em análise", "troca em análise")
+msg(CLI2, "quero 1 fone bluetooth")
+ok(conv["carrinho"] == {fone["id"]: 1}, "pedido direto pelo texto adiciona ao carrinho")
+conv["carrinhoEm"] -= 11 * 60000
+bot.vigiar(); n1 = len(textos(CLI2)); bot.vigiar()
+ok("carrinho" in textos(CLI2)[-1] and t2["metricas"]["abandonados"] == 1 and len(textos(CLI2)) == n1, "lembrete de carrinho abandonado (uma vez)")
+k = B.kpis(t2, [x for x in db.d["tickets"] if x["tenant"] == t2["id"]])
+ok(k["pedidos"] == 1 and k["pagos"] == 1 and k["faturamento"] == 160.2 and k["trocas"] == 1 and k["conversao"] == "50%", "KPIs da loja virtual (%s, conv %s)" % (k["faturamento"], k["conversao"]))
+msg(DONO2, "/painel")
+ok("Conversão carrinho" in textos(DONO2)[-1], "/painel por segmento")
+
+msg(CLI3, "/start loja-exemplo-online")
+ok("não faça" in textos(CLI3)[-1].lower() or "nenhum pagamento" in textos(CLI3)[-1], "loja de exemplo avisa: sem pagamento real")
+msg(CLI3, "tem smartwach?")
+ok(any("smartwatch" in b["callback_data"] for l in ultimo_teclado(CLI3) for b in l), "busca com erro de digitação (smartwach)")
+msg(CLI3, "garafa termica")
+ok("esgotado" in textos(CLI3)[-1], "produto sem estoque aparece como esgotado")
+msg(CLI3, "atendente")
+ok(db.d["tickets"][0]["tipo"] == "atendimento" and db.d["tickets"][0]["humano"], "loja virtual: pedir atendente abre ticket")
+
+# migração segura de um banco antigo
+antigo = {"versao": 1, "offset": 5, "seq": 3002, "usuarios": {"9": {"modo": "dono"}}, "tickets": [{"id": "OF-3001"}],
+          "tenants": {"oficina-pista-livre": {"id": "oficina-pista-livre", "segmento": "oficina", "nome": "X", "donos": [9], "catalogo": [1, 2]}}}
+pm = os.path.join(os.environ["ATENDE_DATA"], "antigo.json"); json.dump(antigo, open(pm, "w"))
+dm = B.DB(pm).d
+ok(dm["tenants"]["oficina-pista-livre"]["catalogo"] == [1, 2] and dm["tenants"]["oficina-pista-livre"]["donos"] == [9] and dm["tickets"] == [{"id": "OF-3001"}]
+   and "loja-exemplo-online" in dm["tenants"] and dm["seq"] == 3002, "migração preserva dados e acrescenta a loja de exemplo")
+
 # API
 srv = B.criar_api(bot, ia)
 base = "http://127.0.0.1:8799"
@@ -128,6 +208,11 @@ with urllib.request.urlopen(req) as resp:
     ok(resp.headers.get("Access-Control-Allow-Origin") == "https://guilhermeromio-netto-prog.github.io", "CORS liberado para o GitHub Pages")
 ok(len(d["pedidos"]) == 2 and all("chat_id" not in p for p in d["pedidos"]), "export sem chat_id, com %d pedidos" % len(d["pedidos"]))
 ok(d["kpis"]["atendimentos"] == 2, "KPIs calculados")
+req = urllib.request.Request(base + "/api/export?negocio=" + t2["id"], headers={"X-Atende-Chave": t2["chave_api"]})
+d2 = json.load(urllib.request.urlopen(req))
+ok(d2["politicas"]["pagamento"]["pixChave"] == "mano@exemplo.com" and d2["kpis"]["pedidos"] == 1 and d2["metricas"]["abandonados"] == 1, "API export da loja virtual com políticas e métricas")
+if os.environ.get("ATENDE_DUMP"):
+    json.dump(d2, open(os.environ["ATENDE_DUMP"].replace(".json", "-ecom.json"), "w"), ensure_ascii=False)
 if os.environ.get("ATENDE_DUMP"):
     json.dump(d, open(os.environ["ATENDE_DUMP"], "w"), ensure_ascii=False)
 srv.shutdown()

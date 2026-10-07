@@ -24,6 +24,7 @@
   };
   M.calcPrazo = function (seg, prio, inicio, duracao) {
     const sla = S().st.sla[seg][prio] || S().st.sla[seg].media;
+    if (seg === 'ecommerce') return AT.E.somaDiasUteis(inicio, AT.E.envioDias(), S().negocio(seg).horario);
     const minutos = Math.max(sla.conclusaoHoras * 60, duracao || 0);
     return U.somaUteis(inicio, minutos, S().negocio(seg).horario);
   };
@@ -43,7 +44,12 @@
   const minusc = (s) => (/^[A-ZÁÉÍÓÚ]{2}/.test(s) ? s : s.charAt(0).toLowerCase() + s.slice(1));
   M.vars = function (t) {
     const rot = S().segDef(t.seg).rotulos;
+    if (t.seg === 'ecommerce') {
+      return { cliente: U.primeiroNome(t.cliente), servico: AT.E.itensTexto(t.itens) || 'seus itens', prazo: U.dataHora(t.prazo), valor: AT.E.brlC(t.totalFinal != null ? t.totalFinal : M.valorMedio(t)),
+        negocio: S().negocio(t.seg).nome, veiculo: 'seu pedido', placa: '', pedido: t.id, rastreio: t.rastreio || 'não informado' };
+    }
     return {
+      pedido: t.id, rastreio: t.rastreio || '',
       cliente: U.primeiroNome(t.cliente),
       servico: (t.itens || []).map((i) => minusc(i.nome)).join(' + ') || 'o serviço',
       prazo: U.dataHora(t.prazo),
@@ -55,17 +61,35 @@
   };
 
   /* ---------- automações (cadeia de mensagens) ---------- */
+  /** lista de etapas do segmento (pedido) ou do fluxo de troca/atendimento da loja virtual */
+  M.statusDe = function (seg, tipo) {
+    const def = S().segDef(seg) || {};
+    if (tipo === 'troca' || tipo === 'atendimento') return def.statusTroca || ['Novo', 'Em análise', 'Resolvido'];
+    return def.status || S().dados.status;
+  };
   M.mudarStatus = function (t, status, ts, opts) {
     ts = ts || Date.now(); opts = opts || {};
+    const def = S().segDef(t.seg);
     t.status = status;
     t.historico.push({ status, ts });
-    if (status === 'Aprovado') t.aprovadoEm = ts;
-    if (status === 'Pronto') t.prontoEm = ts;
+    if (t.tipo === 'troca' || t.tipo === 'atendimento') {
+      if (status === 'Resolvido') t.resolvidoEm = ts;
+      if (status !== 'Novo' && !t.prontoEm) t.prontoEm = ts; // SLA = prazo para a 1ª análise
+      return;
+    }
+    if (status === (def.statusAprovado || 'Aprovado')) {
+      t.aprovadoEm = ts;
+      if (t.seg === 'ecommerce') { // SLA de envio começa no pagamento; estoque baixa na confirmação
+        t.prazo = AT.E.somaDiasUteis(ts, AT.E.envioDias(null, t), S().negocio(t.seg).horario);
+        if (!opts.silencioso) (t.itens || []).forEach((i) => { const c = S().catalogo('ecommerce').find((x) => x.id === i.id); if (c) c.estoque = Math.max(0, (+c.estoque || 0) - (+i.qtd || 1)); });
+      }
+    }
+    if (status === (def.statusPronto || 'Pronto')) t.prontoEm = ts;
     if (status === 'Entregue') { t.entregueEm = ts; if (!t.prontoEm) t.prontoEm = ts; if (!t.valorFinal) t.valorFinal = Math.round(M.valorMedio(t)); }
     if (status === 'Em serviço') {
       t.eventos.filter((e) => e.regra === 'lembrete' && e.estado === 'agendado').forEach((e) => { e.estado = 'enviado'; e.ts = ts - 5 * 60000; });
     }
-    const regras = (S().st.automacoes[t.seg] || []).filter((r) => r.gatilho === status && r.ativo);
+    const regras = (S().st.automacoes[t.seg] || []).filter((r) => r.gatilho === status && r.ativo && r.id !== 'carrinho');
     const vars = M.vars(t);
     regras.forEach((r, i) => {
       const texto = U.template(r.template, vars);
@@ -76,7 +100,9 @@
       if (estado === 'enviado' && !(opts.pularChat || []).includes(r.id)) t.chat.push({ de: 'auto', regra: r.id, texto, ts: quando });
     });
   };
-  M.proximoStatus = (t) => { const o = S().dados.status; const i = o.indexOf(t.status); return i >= 0 && i < o.length - 1 ? o[i + 1] : null; };
+  M.proximoStatus = (t) => { const o = M.statusDe(t.seg, t.tipo); const i = o.indexOf(t.status); return i >= 0 && i < o.length - 1 ? o[i + 1] : null; };
+  /** código de rastreio fictício para a demonstração (o lojista digita o real no bot) */
+  M.rastreioExemplo = () => 'QB' + String(Math.floor(100000000 + Math.random() * 899999999)) + 'BR';
 
   /* ---------- atendimento: intenção e entidades ---------- */
   M.detectar = function (seg, texto) {

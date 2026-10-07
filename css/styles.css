@@ -71,7 +71,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .muted{color:var(--texto-2)}
 .pequeno{font-size:.85rem}
 .linha{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.tabela-wrap{overflow-x:auto;border:1px solid var(--borda);border-radius:var(--raio)}
+.tabela-wrap{position:relative;overflow-x:auto;border:1px solid var(--borda);border-radius:var(--raio)}
 table{border-collapse:collapse;width:100%;font-size:.92rem}
 th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--borda);vertical-align:middle}
 th{background:var(--card-2);color:var(--texto-2);font-weight:700;font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
@@ -180,7 +180,8 @@ td .inp{min-height:36px;padding:6px 8px}
 /* kanban */
 .filtros{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:16px}
 .filtros .campo{min-width:150px}
-.kanban{display:grid;grid-template-columns:repeat(6,minmax(220px,1fr));gap:12px;overflow-x:auto;padding-bottom:10px}
+.pol-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.kanban{display:grid;grid-template-columns:repeat(var(--cols,6),minmax(220px,1fr));gap:12px;overflow-x:auto;padding-bottom:10px}
 .coluna{background:var(--bg-2);border:1px solid var(--borda);border-radius:var(--raio);padding:10px;min-height:200px}
 .coluna h2{font-size:.9rem;display:flex;justify-content:space-between;align-items:center;margin:2px 4px 10px;color:var(--texto-2);text-transform:uppercase;letter-spacing:.05em}
 .coluna ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
@@ -245,7 +246,7 @@ code,.mono{font-family:var(--mono);font-size:.88em;background:var(--bg-2);border
   .graficos{grid-template-columns:1fr}
 }
 @media (max-width:860px){
-  .hero,.duas,.duas--chat,.passos{grid-template-columns:1fr}
+  .hero,.duas,.duas--chat,.passos{grid-template-columns:minmax(0,1fr)}
   .duas .cv{height:72vh}
 }
 @media (max-width:520px){
@@ -253,12 +254,13 @@ code,.mono{font-family:var(--mono);font-size:.88em;background:var(--bg-2);border
   .topo__linha{padding:8px 12px}
   .selo-demo{order:3;width:100%;text-align:center}
   .seg{margin-left:auto}
-  .seg__btn{padding:6px 10px}
+  .seg__btn{padding:6px 9px;font-size:.86rem}
   .destaques,.kpis{grid-template-columns:1fr}
   .kpi__val{font-size:1.5rem}
   .msg{max-width:94%}
   .ficha dl{grid-template-columns:1fr}
   .regra{grid-template-columns:1fr}
+  .pol-grid{grid-template-columns:1fr}
 }
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}

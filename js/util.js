@@ -92,7 +92,7 @@ window.AT = window.AT || {};
     const S = AT.S; if (!S) return '';
     if (S.vivoAtivo()) return '<div class="vivo" role="status"><strong>🟢 Modo conectado</strong> · dados ao vivo do bot de teste <a href="' + U.esc(S.vivo.negocio.link) + '">' + U.esc(S.vivo.negocio.link.replace('https://', '')) + '</a> · ' + U.esc(S.vivo.negocio.nome) + ' · atualizado às ' + U.hora(S.vivo.geradoEm) + ' (a cada 30 s) · <a href="#/config">gerenciar</a></div>';
     if (S.conexao() && S.vivoErro) return '<div class="vivo vivo--erro" role="status"><strong>⚠️ Modo conectado indisponível</strong> (' + U.esc(S.vivoErro) + '). O servidor de teste pode estar desligado. Mostrando dados de exemplo. <a href="#/config">Ver conexão</a></div>';
-    if (S.vivo && !S.vivoAtivo()) return '<div class="vivo" role="status">🟢 Bot conectado ao segmento ' + (S.vivo.negocio.segmento === 'oficina' ? 'Oficina' : 'Loja') + '. Troque o segmento no topo para ver os dados ao vivo.</div>';
+    if (S.vivo && !S.vivoAtivo()) return '<div class="vivo" role="status">🟢 Bot conectado ao segmento ' + S.segDef(S.vivo.negocio.segmento).rotulo + '. Troque o segmento no topo para ver os dados ao vivo.</div>';
     return '';
   };
   AT.U = U;

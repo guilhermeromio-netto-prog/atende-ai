@@ -25,7 +25,7 @@
   function trocarSeg(seg) {
     if (seg === AT.S.seg()) return;
     AT.S.st.segmento = seg; AT.S.salvar();
-    U.toast('Segmento: ' + (seg === 'oficina' ? 'Oficina' : 'Loja') + ' · ' + AT.S.negocio().nome);
+    U.toast('Segmento: ' + AT.S.segDef(seg).rotulo + ' · ' + AT.S.negocio().nome);
     if (/^#\/pedidos\//.test(location.hash)) history.replaceState(null, '', '#/pedidos');
     rota();
   }
@@ -45,7 +45,8 @@
     if (AT.S.vivoErro) U.toast('Modo conectado: ' + AT.S.vivoErro + '. Mostrando dados de exemplo.');
     setInterval(async () => {
       if (AT.S.conexao()) await AT.S.atualizarVivo();
-      const v = AT.V[ROTAS[atual]]; if (v && v._tick) v._tick();
+      const lembrou = AT.ConversaEcom.vigiar();
+      const v = AT.V[ROTAS[atual]]; if (v && v._tick) v._tick(lembrou);
     }, 30000);
   }
   iniciar();

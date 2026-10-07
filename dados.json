@@ -1,5 +1,5 @@
 {
- "versao": 1,
+ "versao": 2,
  "aviso": "Dados de exemplo fictícios para demonstração. Nomes, telefones e placas não pertencem a pessoas reais.",
  "status": [
   "Novo",
@@ -706,6 +706,399 @@
     "Entrega no bairro R$ 35 3h",
     "Seg a sex 8h às 18h30; sábado 8h às 13h"
    ]
+  },
+  "ecommerce": {
+   "id": "ecommerce",
+   "rotulo": "Loja virtual",
+   "icone": "🛒",
+   "negocio": {
+    "nome": "Loja Exemplo Online",
+    "cidade": "Vende para todo o Brasil",
+    "horario": [
+     null,
+     [
+      "09:00",
+      "18:00"
+     ],
+     [
+      "09:00",
+      "18:00"
+     ],
+     [
+      "09:00",
+      "18:00"
+     ],
+     [
+      "09:00",
+      "18:00"
+     ],
+     [
+      "09:00",
+      "18:00"
+     ],
+     [
+      "09:00",
+      "13:00"
+     ]
+    ]
+   },
+   "rotulos": {
+    "pecas": "Produtos",
+    "mao": "Frete",
+    "objeto": "pedido",
+    "pronto": "Pedido enviado"
+   },
+   "status": [
+    "Novo",
+    "Aguardando pagamento",
+    "Pago",
+    "Separando",
+    "Enviado",
+    "Entregue"
+   ],
+   "statusTroca": [
+    "Novo",
+    "Em análise",
+    "Resolvido"
+   ],
+   "statusAprovado": "Pago",
+   "statusPronto": "Enviado",
+   "catalogo": [
+    {
+     "id": "fone-tws",
+     "nome": "Fone de ouvido Bluetooth TWS",
+     "categoria": "Eletrônicos",
+     "preco": 89.9,
+     "estoque": 25,
+     "envioDias": 1,
+     "palavras": [
+      "fone",
+      "fones",
+      "headphone",
+      "headset",
+      "airpods",
+      "bluetooth",
+      "ouvido"
+     ],
+     "exemplo": true,
+     "pecasMin": 89.9,
+     "pecasMax": 89.9,
+     "maoMin": 0,
+     "maoMax": 0,
+     "duracao": 0
+    },
+    {
+     "id": "carregador-20w",
+     "nome": "Carregador turbo USB-C 20W",
+     "categoria": "Eletrônicos",
+     "preco": 59.9,
+     "estoque": 40,
+     "envioDias": 1,
+     "palavras": [
+      "carregador",
+      "fonte",
+      "turbo",
+      "tomada"
+     ],
+     "exemplo": true,
+     "pecasMin": 59.9,
+     "pecasMax": 59.9,
+     "maoMin": 0,
+     "maoMax": 0,
+     "duracao": 0
+    },
+    {
+     "id": "cabo-usbc",
+     "nome": "Cabo USB-C reforçado 2 m",
+     "categoria": "Acessórios",
+     "preco": 29.9,
+     "estoque": 60,
+     "envioDias": 1,
+     "palavras": [
+      "cabo",
+      "usb",
+      "usb-c",
+      "tipo c"
+     ],
+     "exemplo": true,
+     "pecasMin": 29.9,
+     "pecasMax": 29.9,
+     "maoMin": 0,
+     "maoMax": 0,
+     "duracao": 0
+    },
+    {
+     "id": "smartwatch",
+     "nome": "Smartwatch fitness com monitor cardíaco",
+     "categoria": "Eletrônicos",
+     "preco": 199.0,
+     "estoque": 8,
+     "envioDias": 2,
+     "palavras": [
+      "relogio",
+      "smartwatch",
+      "relogio inteligente",
+      "pulseira"
+     ],
+     "exemplo": true,
+     "pecasMin": 199.0,
+     "pecasMax": 199.0,
+     "maoMin": 0,
+     "maoMax": 0,
+     "duracao": 0
+    },
+    {
+     "id": "caixa-som",
+     "nome": "Caixa de som Bluetooth à prova d'água",
+     "categoria": "Eletrônicos",
+     "preco": 149.9,
+     "estoque": 12,
+     "envioDias": 1,
+     "palavras": [
+      "caixa de som",
+      "caixinha",
+      "som",
+      "speaker"
+     ],
+     "exemplo": true,
+     "pecasMin": 149.9,
+     "pecasMax": 149.9,
+     "maoMin": 0,
+     "maoMax": 0,
+     "duracao": 0
+    },
+    {
+     "id": "capinha",
+     "nome": "Capinha antichoque para celular",
+     "categoria": "Acessórios",
+     "preco": 34.9,
+     "estoque": 50,
+     "envioDias": 1,
+     "palavras": [
+      "capinha",
+      "capa",
+      "case",
+      "celular"
+     ],
+     "exemplo": true,
+     "pecasMin": 34.9,
+     "pecasMax": 34.9,
+     "maoMin": 0,
+     "maoMax": 0,
+     "duracao": 0
+    },
+    {
+     "id": "suporte-carro",
+     "nome": "Suporte magnético de celular para carro",
+     "categoria": "Acessórios",
+     "preco": 44.9,
+     "estoque": 30,
+     "envioDias": 1,
+     "palavras": [
+      "suporte",
+      "veicular",
+      "carro",
+      "ima"
+     ],
+     "exemplo": true,
+     "pecasMin": 44.9,
+     "pecasMax": 44.9,
+     "maoMin": 0,
+     "maoMax": 0,
+     "duracao": 0
+    },
+    {
+     "id": "luminaria",
+     "nome": "Luminária LED de mesa recarregável",
+     "categoria": "Casa",
+     "preco": 79.9,
+     "estoque": 15,
+     "envioDias": 2,
+     "palavras": [
+      "luminaria",
+      "abajur",
+      "led",
+      "luz de mesa"
+     ],
+     "exemplo": true,
+     "pecasMin": 79.9,
+     "pecasMax": 79.9,
+     "maoMin": 0,
+     "maoMax": 0,
+     "duracao": 0
+    },
+    {
+     "id": "potes-vidro",
+     "nome": "Kit 4 potes herméticos de vidro",
+     "categoria": "Casa",
+     "preco": 69.9,
+     "estoque": 20,
+     "envioDias": 2,
+     "palavras": [
+      "pote",
+      "potes",
+      "vidro",
+      "hermetico",
+      "cozinha"
+     ],
+     "exemplo": true,
+     "pecasMin": 69.9,
+     "pecasMax": 69.9,
+     "maoMin": 0,
+     "maoMax": 0,
+     "duracao": 0
+    },
+    {
+     "id": "garrafa-termica",
+     "nome": "Garrafa térmica inox 1 L",
+     "categoria": "Casa",
+     "preco": 89.0,
+     "estoque": 0,
+     "envioDias": 2,
+     "palavras": [
+      "garrafa",
+      "termica",
+      "garrafinha"
+     ],
+     "exemplo": true,
+     "pecasMin": 89.0,
+     "pecasMax": 89.0,
+     "maoMin": 0,
+     "maoMax": 0,
+     "duracao": 0
+    }
+   ],
+   "politicas": {
+    "frete": {
+     "tipo": "regiao",
+     "gratisAcima": 199,
+     "fixo": 19.9,
+     "regioes": {
+      "SP": 14.9,
+      "Sudeste": 21.9,
+      "Outros": 32.9
+     },
+     "prazosDias": {
+      "SP": 2,
+      "Sudeste": 4,
+      "Outros": 8
+     }
+    },
+    "envioDiasUteis": 1,
+    "troca": "Troca ou devolução em até 7 dias corridos após o recebimento por arrependimento (art. 49 do CDC), com reembolso integral. Produto com defeito: até 90 dias.",
+    "pagamento": {
+     "pixDescontoPct": 5,
+     "parcelas": 6,
+     "pixChave": "",
+     "linkCartao": ""
+    }
+   },
+   "intents": [
+    {
+     "id": "rastreio",
+     "rotulo": "Rastrear pedido",
+     "palavras": [
+      "cade meu pedido",
+      "cade o meu pedido",
+      "rastreio",
+      "rastrear",
+      "rastreamento",
+      "codigo de rastreio",
+      "onde esta meu pedido",
+      "nao chegou",
+      "ainda nao chegou",
+      "chega quando",
+      "meu pedido",
+      "status do pedido"
+     ]
+    },
+    {
+     "id": "troca",
+     "rotulo": "Troca ou devolução",
+     "palavras": [
+      "troca",
+      "trocar",
+      "devolver",
+      "devolucao",
+      "defeito",
+      "veio errado",
+      "veio quebrado",
+      "quebrado",
+      "arrependi",
+      "reembolso",
+      "estorno",
+      "nao gostei"
+     ]
+    },
+    {
+     "id": "frete",
+     "rotulo": "Frete e prazo",
+     "palavras": [
+      "frete",
+      "cep",
+      "prazo de entrega",
+      "quanto tempo chega",
+      "chega em quantos dias",
+      "quantos dias",
+      "envio",
+      "entregam",
+      "entrega"
+     ]
+    },
+    {
+     "id": "comprar",
+     "rotulo": "Fazer pedido",
+     "palavras": [
+      "quero comprar",
+      "comprar",
+      "fazer pedido",
+      "fechar pedido",
+      "finalizar",
+      "carrinho",
+      "quero pedir",
+      "quero esse",
+      "quero levar"
+     ]
+    },
+    {
+     "id": "pagamento",
+     "rotulo": "Formas de pagamento",
+     "palavras": [
+      "pix",
+      "cartao",
+      "parcela",
+      "parcelado",
+      "parcelar",
+      "boleto",
+      "pagamento",
+      "forma de pagamento",
+      "desconto"
+     ]
+    }
+   ],
+   "perguntas": [],
+   "ajustes": [],
+   "modelos": [],
+   "exemplos": [
+    "Vocês têm fone bluetooth?",
+    "Quanto é o frete pro CEP 30140-071?",
+    "Quero comprar um carregador",
+    "Cadê meu pedido?",
+    "Quero trocar um produto"
+   ],
+   "onboardingExemplos": [
+    "Minha loja se chama Loja Exemplo Online",
+    "Fone bluetooth R$ 89 estoque 12 entrega 3 dias",
+    "Frete grátis acima de R$ 199; frete SP R$ 14,90 2 dias, Sudeste R$ 21,90 4 dias, outros R$ 32,90 8 dias",
+    "Pix com 5% de desconto, cartão em até 6x",
+    "Envio em 1 dia útil"
+   ]
+  }
+ },
+ "metricasExemplo": {
+  "ecommerce": {
+   "carrinhos": 14,
+   "abandonados": 4
   }
  },
  "automacoes": {
@@ -808,6 +1201,56 @@
     "quando": "1 dia depois",
     "template": "Oi, {cliente}! Deu tudo certo com {servico}? De 0 a 10, quanto você indicaria a {negocio}?"
    }
+  ],
+  "ecommerce": [
+   {
+    "id": "pagamento",
+    "nome": "Pedido recebido + instruções de pagamento",
+    "gatilho": "Aguardando pagamento",
+    "ativo": true,
+    "quando": "Na hora",
+    "template": "Pedido {pedido} registrado, {cliente}! Total: {valor}. Assim que o pagamento for confirmado, separamos tudo."
+   },
+   {
+    "id": "confirmacao",
+    "nome": "Pagamento confirmado",
+    "gatilho": "Pago",
+    "ativo": true,
+    "quando": "Quando o lojista confirma",
+    "template": "Pagamento confirmado, {cliente}! O pedido {pedido} entra em separação e sai até {prazo}."
+   },
+   {
+    "id": "andamento",
+    "nome": "Pedido em separação",
+    "gatilho": "Separando",
+    "ativo": true,
+    "quando": "Na hora",
+    "template": "{cliente}, estamos separando seu pedido {pedido}: {servico}."
+   },
+   {
+    "id": "pronto",
+    "nome": "Pedido enviado + rastreio",
+    "gatilho": "Enviado",
+    "ativo": true,
+    "quando": "Na hora",
+    "template": "Seu pedido {pedido} foi enviado, {cliente}! Código de rastreio: {rastreio}."
+   },
+   {
+    "id": "posvenda",
+    "nome": "Pós-venda e avaliação",
+    "gatilho": "Entregue",
+    "ativo": true,
+    "quando": "1 dia depois",
+    "template": "Oi, {cliente}! Seu pedido {pedido} chegou direitinho? De 0 a 10, quanto você indicaria a {negocio}?"
+   },
+   {
+    "id": "carrinho",
+    "nome": "Carrinho abandonado",
+    "gatilho": "Carrinho",
+    "ativo": true,
+    "quando": "10 min sem finalizar (teste)",
+    "template": "Oi! Seus itens ainda estão no carrinho da {negocio}: {servico}. Quer fechar o pedido? É só tocar abaixo."
+   }
   ]
  },
  "sla": {
@@ -837,6 +1280,20 @@
    "baixa": {
     "respostaMin": 60,
     "conclusaoHoras": 24
+   }
+  },
+  "ecommerce": {
+   "alta": {
+    "respostaMin": 5,
+    "envioDias": 1
+   },
+   "media": {
+    "respostaMin": 15,
+    "envioDias": 1
+   },
+   "baixa": {
+    "respostaMin": 60,
+    "envioDias": 2
    }
   }
  },
@@ -1287,6 +1744,236 @@
    "respostaSeg": 6,
    "bairro": "Cambuí",
    "id": "LJ-1025"
+  },
+  {
+   "seg": "ecommerce",
+   "tipo": "pedido",
+   "cliente": "Júlia Fernandes",
+   "telefone": "(31) 98820-4410",
+   "problema": "Quero o fone bluetooth e um cabo",
+   "intent": "comprar",
+   "itens": [
+    [
+     "fone-tws",
+     1
+    ],
+    [
+     "cabo-usbc",
+     1
+    ]
+   ],
+   "servicos": [
+    "fone-tws",
+    "cabo-usbc"
+   ],
+   "status": "Entregue",
+   "prioridade": "media",
+   "criadoHaMin": 23240,
+   "respostaSeg": 4,
+   "cep": "30140-071",
+   "cidade": "Belo Horizonte",
+   "uf": "MG",
+   "pagamento": "pix",
+   "nps": 10,
+   "rastreio": "QB482913775BR",
+   "id": "EC-1026"
+  },
+  {
+   "seg": "ecommerce",
+   "tipo": "pedido",
+   "cliente": "Rodrigo Alves",
+   "telefone": "(11) 99310-2287",
+   "problema": "Tem smartwatch? Quero comprar",
+   "intent": "comprar",
+   "itens": [
+    [
+     "smartwatch",
+     1
+    ]
+   ],
+   "servicos": [
+    "smartwatch"
+   ],
+   "status": "Entregue",
+   "prioridade": "media",
+   "criadoHaMin": 14500,
+   "respostaSeg": 5,
+   "cep": "04538-133",
+   "cidade": "São Paulo",
+   "uf": "SP",
+   "pagamento": "cartao",
+   "nps": 9,
+   "rastreio": "QB519004321BR",
+   "id": "EC-1027"
+  },
+  {
+   "seg": "ecommerce",
+   "tipo": "pedido",
+   "cliente": "Letícia Moraes",
+   "telefone": "(41) 98455-7120",
+   "problema": "Quero 2 capinhas e o suporte pro carro",
+   "intent": "comprar",
+   "itens": [
+    [
+     "capinha",
+     2
+    ],
+    [
+     "suporte-carro",
+     1
+    ]
+   ],
+   "servicos": [
+    "capinha",
+    "suporte-carro"
+   ],
+   "status": "Entregue",
+   "prioridade": "media",
+   "criadoHaMin": 8940,
+   "respostaSeg": 6,
+   "cep": "80010-000",
+   "cidade": "Curitiba",
+   "uf": "PR",
+   "pagamento": "pix",
+   "nps": 7,
+   "atrasou": true,
+   "rastreio": "QB530118842BR",
+   "id": "EC-1028"
+  },
+  {
+   "seg": "ecommerce",
+   "tipo": "pedido",
+   "cliente": "Caio Monteiro",
+   "telefone": "(21) 97701-3398",
+   "problema": "Caixa de som à prova d'água, tem?",
+   "intent": "comprar",
+   "itens": [
+    [
+     "caixa-som",
+     1
+    ]
+   ],
+   "servicos": [
+    "caixa-som"
+   ],
+   "status": "Enviado",
+   "prioridade": "media",
+   "criadoHaMin": 2940,
+   "respostaSeg": 4,
+   "cep": "22041-001",
+   "cidade": "Rio de Janeiro",
+   "uf": "RJ",
+   "pagamento": "pix",
+   "rastreio": "QB541277610BR",
+   "id": "EC-1029"
+  },
+  {
+   "seg": "ecommerce",
+   "tipo": "pedido",
+   "cliente": "Natália Rocha",
+   "telefone": "(11) 98102-6654",
+   "problema": "Quero a luminária e os potes de vidro",
+   "intent": "comprar",
+   "itens": [
+    [
+     "luminaria",
+     1
+    ],
+    [
+     "potes-vidro",
+     1
+    ]
+   ],
+   "servicos": [
+    "luminaria",
+    "potes-vidro"
+   ],
+   "status": "Separando",
+   "prioridade": "media",
+   "criadoHaMin": 1200,
+   "respostaSeg": 5,
+   "cep": "01310-100",
+   "cidade": "São Paulo",
+   "uf": "SP",
+   "pagamento": "pix",
+   "id": "EC-1030"
+  },
+  {
+   "seg": "ecommerce",
+   "tipo": "pedido",
+   "cliente": "Henrique Dias",
+   "telefone": "(19) 99644-0871",
+   "problema": "Carregador turbo 20W",
+   "intent": "comprar",
+   "itens": [
+    [
+     "carregador-20w",
+     2
+    ]
+   ],
+   "servicos": [
+    "carregador-20w"
+   ],
+   "status": "Pago",
+   "prioridade": "media",
+   "criadoHaMin": 180,
+   "respostaSeg": 3,
+   "cep": "13015-904",
+   "cidade": "Campinas",
+   "uf": "SP",
+   "pagamento": "pix",
+   "prazoEmMin": 50,
+   "id": "EC-1031"
+  },
+  {
+   "seg": "ecommerce",
+   "tipo": "pedido",
+   "cliente": "Sabrina Lopes",
+   "telefone": "(71) 98233-5590",
+   "problema": "Quero o fone bluetooth",
+   "intent": "comprar",
+   "itens": [
+    [
+     "fone-tws",
+     1
+    ]
+   ],
+   "servicos": [
+    "fone-tws"
+   ],
+   "status": "Aguardando pagamento",
+   "prioridade": "media",
+   "criadoHaMin": 35,
+   "respostaSeg": 4,
+   "cep": "40020-000",
+   "cidade": "Salvador",
+   "uf": "BA",
+   "pagamento": "pix",
+   "id": "EC-1032"
+  },
+  {
+   "seg": "ecommerce",
+   "tipo": "troca",
+   "cliente": "Letícia Moraes",
+   "telefone": "(41) 98455-7120",
+   "problema": "Uma das capinhas veio com o tamanho errado",
+   "intent": "troca",
+   "itens": [
+    [
+     "capinha",
+     1
+    ]
+   ],
+   "servicos": [
+    "capinha"
+   ],
+   "status": "Em análise",
+   "prioridade": "media",
+   "criadoHaMin": 2910,
+   "respostaSeg": 5,
+   "motivo": "Produto errado",
+   "id": "EC-1033",
+   "pedidoRef": "EC-1028"
   }
  ]
 }

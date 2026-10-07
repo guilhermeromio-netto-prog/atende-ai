@@ -8,14 +8,24 @@
 
   const slaChip = (t) => { const s = M.slaEstado(t); return '<span class="chip chip--' + s.cls + '" data-sla="' + U.esc(t.id) + '">⏱️ ' + U.esc(s.texto) + '</span>'; };
   const prioChip = (p) => '<span class="chip' + (p === 'alta' ? ' chip--erro' : p === 'media' ? ' chip--atencao' : '') + '">' + S().dados.prioridades[p] + '</span>';
-  const servicos = (t) => (t.itens && t.itens.length ? t.itens.map((i) => i.nome).join(' + ') : t.problema);
+  const servicos = (t) => (t.itens && t.itens.length ? (t.seg === 'ecommerce' ? AT.E.itensTexto(t.itens) : t.itens.map((i) => i.nome).join(' + ')) : t.problema);
+  const ecom = (t) => t.seg === 'ecommerce';
+  const valorCartao = (t) => (ecom(t) ? (t.totalFinal != null ? AT.E.brlC(t.totalFinal) : '—') : t.total && t.total.max ? U.brl(t.valorFinal || M.valorMedio(t)) : '—');
+  const valorLista = (t) => (ecom(t) ? (t.totalFinal != null ? AT.E.brlC(t.totalFinal) : '—') : t.total && t.total.max ? U.faixa(t.total.min, t.total.max) : '—');
+  const TIPO = { pedido: 'Pedido', troca: 'Troca/devolução', atendimento: 'Atendimento' };
+  /** colunas do kanban: etapas do segmento; na loja virtual, trocas/atendimentos ganham coluna própria */
+  function colunas(seg) {
+    const base = M.statusDe(seg).map((st) => ({ rotulo: st, f: (t) => t.status === st && (!t.tipo || t.tipo === 'pedido') }));
+    if (seg === 'ecommerce') base.push({ rotulo: 'Trocas e atendimento', f: (t) => t.tipo === 'troca' || t.tipo === 'atendimento' });
+    return base;
+  }
 
   function filtrados() {
     const b = U.norm(filtro.busca);
     return S().ticketsSeg().filter((t) => {
       if (filtro.prio && t.prioridade !== filtro.prio) return false;
       if (filtro.sla && M.slaEstado(t).cls !== filtro.sla) return false;
-      if (b && !U.norm([t.id, t.cliente, t.placa, t.veiculo, t.problema, servicos(t)].join(' ')).includes(b)) return false;
+      if (b && !U.norm([t.id, t.cliente, t.placa, t.veiculo, t.problema, servicos(t), t.rastreio, t.cidade].join(' ')).includes(b)) return false;
       return true;
     });
   }
@@ -24,22 +34,24 @@
     const s = M.slaEstado(t);
     return '<li><button type="button" class="tk' + (t._novo ? ' tk--novo' : '') + '" data-id="' + U.esc(t.id) + '" aria-label="Pedido ' + U.esc(t.id) + ', ' + U.esc(t.cliente) + ', ' + U.esc(t.status) + ', ' + U.esc(s.texto) + '">' +
       '<span class="tk__top"><span>' + U.esc(t.id) + (t.vivo ? ' · ao vivo' : t.exemplo ? ' · exemplo' : ' · novo') + '</span><span>' + U.dataCurta(t.criado) + ' ' + U.hora(t.criado) + '</span></span>' +
-      '<span class="tk__nome">' + U.esc(t.cliente) + (t.humano ? ' 🙋' : '') + '</span>' +
+      '<span class="tk__nome">' + U.esc(t.cliente) + (t.humano ? ' 🙋' : '') + (t.pagamentoInformadoEm && t.status === 'Aguardando pagamento' ? ' 💸' : '') + '</span>' +
+      (t.tipo && t.tipo !== 'pedido' ? '<span class="tk__serv">' + TIPO[t.tipo] + ' · ' + U.esc(t.status) + '</span>' : '') +
       '<span class="tk__serv">' + U.esc(servicos(t)) + (t.veiculo ? ' · ' + U.esc(t.veiculo) : '') + '</span>' +
-      '<span class="tk__rod">' + slaChip(t) + '<strong class="pequeno">' + (t.total && t.total.max ? U.brl(t.valorFinal || M.valorMedio(t)) : '—') + '</strong></span></button></li>';
+      '<span class="tk__rod">' + slaChip(t) + '<strong class="pequeno">' + valorCartao(t) + '</strong></span></button></li>';
   }
 
   function desenharQuadro() {
     const lista = filtrados(); const area = mainRef.querySelector('#pd-area');
     mainRef.querySelector('#pd-total').textContent = lista.length + ' pedido(s)';
     if (filtro.modo === 'kanban') {
-      area.innerHTML = '<div class="kanban">' + S().dados.status.map((st) => {
-        const col = lista.filter((t) => t.status === st);
-        return '<section class="coluna" aria-label="' + st + '"><h2>' + st + ' <span class="chip">' + col.length + '</span></h2><ol>' + (col.map(cartao).join('') || '<li class="pequeno muted" style="padding:6px">Nenhum pedido</li>') + '</ol></section>';
+      const cols = colunas(S().seg());
+      area.innerHTML = '<div class="kanban" style="--cols:' + cols.length + '">' + cols.map((co) => {
+        const col = lista.filter(co.f);
+        return '<section class="coluna" aria-label="' + co.rotulo + '"><h2>' + co.rotulo + ' <span class="chip">' + col.length + '</span></h2><ol>' + (col.map(cartao).join('') || '<li class="pequeno muted" style="padding:6px">Nenhum pedido</li>') + '</ol></section>';
       }).join('') + '</div>';
     } else {
       area.innerHTML = '<div class="tabela-wrap"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Serviço</th><th>Status</th><th>Prioridade</th><th>SLA</th><th class="num">Valor</th><th><span class="sr">Abrir</span></th></tr></thead><tbody>' +
-        lista.map((t) => '<tr><td>' + U.esc(t.id) + (t.exemplo ? ' <span class="chip chip--exemplo">exemplo</span>' : '') + '</td><td>' + U.esc(t.cliente) + '</td><td>' + U.esc(servicos(t)) + '</td><td>' + U.esc(t.status) + '</td><td>' + prioChip(t.prioridade) + '</td><td>' + slaChip(t) + '</td><td class="num">' + (t.total && t.total.max ? U.faixa(t.total.min, t.total.max) : '—') + '</td><td><button type="button" class="btn btn--p tk-abrir" data-id="' + U.esc(t.id) + '">Detalhes</button></td></tr>').join('') +
+        lista.map((t) => '<tr><td>' + U.esc(t.id) + (t.exemplo ? ' <span class="chip chip--exemplo">exemplo</span>' : '') + '</td><td>' + U.esc(t.cliente) + '</td><td>' + U.esc(servicos(t)) + '</td><td>' + U.esc(t.status) + (t.tipo && t.tipo !== 'pedido' ? ' · ' + TIPO[t.tipo] : '') + '</td><td>' + prioChip(t.prioridade) + '</td><td>' + slaChip(t) + '</td><td class="num">' + valorLista(t) + '</td><td><button type="button" class="btn btn--p tk-abrir" data-id="' + U.esc(t.id) + '">Detalhes</button></td></tr>').join('') +
         '</tbody></table></div>';
     }
     area.querySelectorAll('[data-id]').forEach((b) => b.addEventListener('click', () => abrir(b.dataset.id, b)));
@@ -60,10 +72,13 @@
   }
 
   function corpoGaveta(t) {
-    const def = S().segDef(t.seg); const rot = def.rotulos; const ordem = S().dados.status; const i = ordem.indexOf(t.status);
+    const def = S().segDef(t.seg); const rot = def.rotulos; const ordem = M.statusDe(t.seg, t.tipo); const i = ordem.indexOf(t.status);
     const prox = M.proximoStatus(t);
     const pos = t.eventos.find((e) => e.regra === 'posvenda' && e.estado === 'agendado');
-    const acao = t.vivo ? null : prox ? '▶ Simular avanço para "' + prox + '"' : pos ? '▶ Simular envio do pós-venda agora' : null;
+    let acao = t.vivo ? null : prox ? '▶ Simular avanço para "' + prox + '"' : pos ? '▶ Simular envio do pós-venda agora' : null;
+    if (acao && ecom(t) && prox === 'Pago') acao = '✅ Confirmar pagamento (simulado: confira no seu banco)';
+    if (acao && ecom(t) && prox === 'Enviado') acao = '📦 Informar rastreio e enviar';
+    if (acao && prox === 'Resolvido') acao = '✅ Marcar como resolvido';
     const canal = AT.Canais.get(t.canal);
     const dd = (k, v) => (v ? '<dt>' + k + '</dt><dd>' + U.esc(v) + '</dd>' : '');
     return `
@@ -72,18 +87,29 @@
         <button type="button" class="btn btn--p fechar" aria-label="Fechar detalhes">✕</button></div>
       <div class="gaveta__corpo">
         <section><h3>Etapa</h3><div class="pipeline">${ordem.map((s, k) => '<span class="' + (k < i ? 'feito' : k === i ? 'atual' : '') + '">' + s + '</span>').join('')}</div>
-          <div class="linha" style="margin-top:10px">${acao ? '<button type="button" class="btn btn--pri" id="gv-avancar">' + acao + '</button>' : '<span class="muted pequeno">' + (t.vivo ? 'Pedido real do bot (somente leitura): avance pelos botões do dono no Telegram.' : 'Ciclo completo: entregue e pós-venda enviado.') + '</span>'}</div>
+          ${acao && ecom(t) && prox === 'Enviado' ? '<label class="campo" style="margin-top:10px">Código de rastreio (exemplo gerado; no bot o lojista digita o real)<input class="inp" id="gv-rastreio" value="' + M.rastreioExemplo() + '" maxlength="40"></label>' : ''}
+        <div class="linha" style="margin-top:10px">${acao ? '<button type="button" class="btn btn--pri" id="gv-avancar">' + acao + '</button>' : '<span class="muted pequeno">' + (t.vivo ? 'Pedido real do bot (somente leitura): avance pelos botões do dono no Telegram.' : 'Ciclo completo: entregue e pós-venda enviado.') + '</span>'}</div>
           <p class="pequeno muted" style="margin:6px 0 0">Cada avanço dispara as automações ativas daquela etapa, como faria o servidor da fase 2.</p></section>
         <section class="ficha"><h3>Cliente</h3><dl>
           ${dd('Nome', t.cliente)}${dd('Canal', canal.nome)}${dd('Telefone', t.telefone)}${dd('Veículo', t.veiculo)}${dd('Placa', t.placa)}${dd('Entrega', t.bairro)}
+          ${ecom(t) ? dd('Tipo', TIPO[t.tipo || 'pedido']) + dd('Endereço', t.endereco) + dd('CEP', t.cep ? t.cep + ' · ' + (t.cidade ? t.cidade + '/' + t.uf : 'região ' + t.regiao) : '') + dd('Pagamento', t.pagamento ? (t.pagamento === 'pix' ? 'Pix' : 'Cartão') + (t.pagamentoInformadoEm ? ' · cliente tocou em “Já paguei” ' + U.dataHora(t.pagamentoInformadoEm) : '') : '') + dd('Rastreio', t.rastreio) + dd('Motivo', t.motivo) + dd('Pedido de origem', t.pedidoRef) : ''}
           ${dd('Relato', t.problema)}${dd('Aberto', U.dataHora(t.criado))}${dd('Prazo (SLA)', U.dataHora(t.prazo))}${t.agendamento ? dd('Agendado', U.dataHora(t.agendamento)) : ''}
           ${dd('1ª resposta', U.tempoResp(t.tempoRespostaSeg || 0) + (t.humano ? ' (atendente)' : ' (automática)'))}${t.nps != null ? dd('NPS', String(t.nps)) : ''}</dl></section>
-        <section><h3>Orçamento</h3>${t.itens && t.itens.length ? '<div class="tabela-wrap"><table><thead><tr><th>Item</th><th class="num">' + U.esc(rot.pecas) + '</th><th class="num">' + U.esc(rot.mao) + '</th></tr></thead><tbody>' +
+        ${ecom(t) ? secaoItens(t) : ''}<section${ecom(t) ? ' hidden' : ''}><h3>Orçamento</h3>${t.itens && t.itens.length ? '<div class="tabela-wrap"><table><thead><tr><th>Item</th><th class="num">' + U.esc(rot.pecas) + '</th><th class="num">' + U.esc(rot.mao) + '</th></tr></thead><tbody>' +
           t.itens.map((it) => '<tr><td>' + U.esc(it.nome) + '</td><td class="num">' + U.faixaT(it.pecasMin, it.pecasMax) + '</td><td class="num">' + U.faixaT(it.maoMin, it.maoMax) + '</td></tr>').join('') +
           '<tr><td><strong>Total</strong></td><td class="num" colspan="2"><strong>' + U.faixa(t.total.min, t.total.max) + '</strong>' + (t.valorFinal ? '<br><span class="pequeno muted">cobrado: ' + U.brl(t.valorFinal) + '</span>' : '') + '</td></tr></tbody></table></div>' : '<p class="muted pequeno">Sem orçamento ainda (aguardando atendente).</p>'}</section>
         <section><h3>Cadeia de mensagens automáticas</h3>${linhaTempo(t)}</section>
         <section><h3>Conversa completa (${U.esc(canal.nome)})</h3><div class="mini-chat ${canal.classe}" id="gv-chat" role="log" aria-label="Histórico da conversa"></div></section>
       </div>`;
+  }
+
+  function secaoItens(t) {
+    if (!t.itens || !t.itens.length) return '<section><h3>Itens</h3><p class="muted pequeno">' + (t.tipo === 'atendimento' ? 'Atendimento sem pedido (cliente pediu uma pessoa).' : 'Sem itens.') + '</p></section>';
+    const B = AT.E.brlC;
+    return '<section><h3>' + (t.tipo === 'troca' ? 'Itens da troca' : 'Itens do pedido') + '</h3><div class="tabela-wrap"><table><thead><tr><th>Produto</th><th class="num">Qtd</th><th class="num">Valor</th></tr></thead><tbody>' +
+      t.itens.map((i) => '<tr><td>' + U.esc(i.nome) + '</td><td class="num">' + (i.qtd || 1) + '</td><td class="num">' + B((i.preco || i.pecasMin) * (i.qtd || 1)) + '</td></tr>').join('') +
+      (t.totalFinal != null ? '<tr><td>Frete</td><td></td><td class="num">' + (t.freteGratis ? 'grátis' : B(t.frete)) + '</td></tr>' + (t.desconto ? '<tr><td>Desconto Pix</td><td></td><td class="num">−' + B(t.desconto) + '</td></tr>' : '') +
+        '<tr><td><strong>Total</strong></td><td></td><td class="num"><strong>' + B(t.totalFinal) + '</strong></td></tr>' : '') + '</tbody></table></div></section>';
   }
 
   function abrir(id, origem) {
@@ -99,7 +125,7 @@
       chat.querySelectorAll('.tecla').forEach((b) => { b.disabled = true; });
       gv.querySelector('.fechar').addEventListener('click', fechar);
       const av = gv.querySelector('#gv-avancar');
-      if (av) av.addEventListener('click', () => { avancar(t); pintar(); gv.querySelector('#gv-avancar, .fechar').focus(); desenharQuadro(); });
+      if (av) av.addEventListener('click', () => { const rs = gv.querySelector('#gv-rastreio'); if (rs) t.rastreio = rs.value.trim() || M.rastreioExemplo(); avancar(t); pintar(); gv.querySelector('#gv-avancar, .fechar').focus(); desenharQuadro(); });
     };
     pintar();
     raiz.querySelector('[data-fechar]').addEventListener('click', fechar);
@@ -124,8 +150,9 @@
   function avancar(t) {
     const prox = M.proximoStatus(t);
     if (prox) {
+      if (ecom(t) && prox === 'Enviado' && !t.rastreio) t.rastreio = M.rastreioExemplo();
       M.mudarStatus(t, prox);
-      if (prox === 'Entregue' && !t.exemplo) t.valorFinal = Math.round(M.valorMedio(t));
+      if (prox === 'Entregue' && !t.exemplo) t.valorFinal = ecom(t) ? t.totalFinal : Math.round(M.valorMedio(t));
       U.toast(t.id + ' → ' + prox + ' · automações disparadas');
     } else {
       const ev = t.eventos.find((e) => e.regra === 'posvenda' && e.estado === 'agendado');
@@ -155,7 +182,7 @@
           <button type="button" class="seg__btn" data-modo="lista" aria-pressed="${filtro.modo === 'lista'}">Lista</button></div>
       </div>
       <div id="pd-area"></div>
-      <p class="pequeno muted" style="margin-top:12px">Pedidos marcados como "exemplo" são fictícios. ${seg === 'oficina' ? 'Oficina' : 'Loja'}: troque o segmento no topo para ver o outro quadro.</p>`;
+      <p class="pequeno muted" style="margin-top:12px">Pedidos marcados como "exemplo" são fictícios. ${U.esc(S().segDef(seg).rotulo)}: troque o segmento no topo para ver os outros quadros.${seg === 'ecommerce' ? ' Na loja virtual, o lojista confirma o pagamento (nenhum pagamento real é processado) e informa o rastreio; cada etapa dispara a mensagem automática.' : ''}</p>`;
     main.querySelector('#pd-busca').addEventListener('input', U.debounce((e) => { filtro.busca = e.target.value; desenharQuadro(); }, 200));
     main.querySelector('#pd-prio').addEventListener('change', (e) => { filtro.prio = e.target.value; desenharQuadro(); });
     main.querySelector('#pd-sla').addEventListener('change', (e) => { filtro.sla = e.target.value; desenharQuadro(); });

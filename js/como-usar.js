@@ -24,13 +24,41 @@
 
       <section class="card" aria-labelledby="g-cli"><h2 id="g-cli">🙋 Para o cliente final</h2>
         <ol>
-          <li>Abra o link que a oficina ou loja divulgou (ex.: <a href="${BOT}?start=oficina-pista-livre">${BOT.replace('https://', '')}?start=oficina-pista-livre</a>).</li>
+          <li>Abra o link que a oficina ou loja divulgou (ex.: <a href="${BOT}?start=oficina-pista-livre">${BOT.replace('https://', '')}?start=oficina-pista-livre</a> ou a loja virtual <a href="${BOT}?start=loja-exemplo-online">…?start=loja-exemplo-online</a>).</li>
           <li>Conte o problema do seu jeito: “barulho ao frear”, “carro não liga”, “quero pintar o quarto”.</li>
           <li>Responda as perguntas: nome, modelo e placa (oficina) ou bairro de entrega (loja), e a urgência.</li>
           <li>Receba o orçamento com itens, total, duração e prazo. Toque em <strong>✅ Aprovar</strong> ou <strong>🙋 Falar com atendente</strong>.</li>
           <li>Escolha o horário. Depois chegam sozinhas: confirmação, aviso de início, “pronto” e a pesquisa de satisfação (1 a 5 estrelas).</li>
         </ol>
         <p class="pequeno muted">Comandos: <code>/nova</code> recomeça, <code>/trocar</code> escolhe outro negócio. Escrever “atendente” chama uma pessoa a qualquer momento.</p>
+      </section>
+
+      <section class="card" aria-labelledby="g-ecom" id="loja-virtual"><h2 id="g-ecom">🛒 Loja virtual: passo a passo para o lojista</h2>
+        <p>Para quem vende online: o bot mostra produtos, preço e estoque, calcula frete pelo CEP, fecha o pedido com resumo e manda as <strong>suas</strong> instruções de pagamento. O bot nunca cobra nem confirma pagamento sozinho: quem confere e confirma é você.</p>
+        <h3>1. Criar a sua loja</h3>
+        <ol>
+          <li>Abra <a href="${BOT}?start=dono">${BOT.replace('https://', '')}?start=dono</a> e toque em <strong>➕ Criar meu negócio do zero</strong>.</li>
+          <li>Escreva o nome da loja (ex.: <code>Loja do Mano</code>).</li>
+          <li>Escolha <strong>🛒 Loja virtual (catálogo de exemplo)</strong> para começar com 10 produtos fictícios ou <strong>🛒 Loja virtual (catálogo vazio)</strong> para cadastrar os seus.</li>
+        </ol>
+        <h3>2. Cadastrar produtos e políticas (conversando)</h3>
+        <ul>
+          <li>Produto: <code>Fone bluetooth R$ 89 estoque 12 entrega 3 dias</code> (repetir o nome atualiza preço/estoque).</li>
+          <li>Frete grátis: <code>Frete grátis acima de R$ 199</code> · fixo: <code>Frete fixo R$ 19,90</code></li>
+          <li>Frete por região do CEP: <code>Frete SP R$ 15 2 dias, Sudeste R$ 22 4 dias, outros R$ 35 8 dias</code></li>
+          <li>Prazo de envio: <code>Envio em 1 dia útil</code> · Troca: <code>Troca em até 7 dias por arrependimento</code></li>
+          <li>Pagamento: <code>Pix com 5% de desconto, cartão em até 6x</code> · <code>Chave pix: sua-chave</code> · <code>Link do cartão: https://…</code></li>
+          <li>Conferir tudo: <code>/catalogo</code> e <code>/politicas</code>. Remover produto: <code>/remover N</code>.</li>
+        </ul>
+        <h3>3. Divulgar e testar</h3>
+        <ol>
+          <li>Envie <code>/link</code> e coloque o link no Instagram, na bio ou no site.</li>
+          <li>Teste você mesmo com <code>/cliente</code>: pergunte “tem fone bluetooth?”, adicione ao carrinho, informe CEP, endereço e forma de pagamento e confirme. Volte com <code>/dono</code>.</li>
+          <li>Cada pedido chega para você com botões: <strong>✅ Confirmar pagamento</strong> (depois de conferir no banco; o estoque baixa sozinho), <strong>▶ Separando</strong>, <strong>📦 Informar rastreio e enviar</strong> (você digita o código) e <strong>Entregue</strong> (sai o pós-venda com avaliação).</li>
+          <li>O cliente pode perguntar “cadê meu pedido EC-…?” e recebe status e rastreio; “quero trocar” abre uma solicitação com motivo e a sua política.</li>
+          <li>Carrinho esquecido recebe um lembrete automático (modo teste: 10 minutos). <code>/painel</code> mostra pedidos, faturamento, ticket médio, conversão carrinho → pago, abandonos e trocas.</li>
+        </ol>
+        <p>Quer só ver funcionando? Abra a loja de exemplo: <a href="${BOT}?start=loja-exemplo-online">${BOT.replace('https://', '')}?start=loja-exemplo-online</a> (produtos fictícios; não faça pagamento).</p>
       </section>
 
       <section class="card" aria-labelledby="g-dash"><h2 id="g-dash">🖥️ Ligar este painel aos dados do bot</h2>
@@ -47,7 +75,8 @@
           <li>O bot e a API rodam num computador de teste. <strong>Se ele desligar ou reiniciar, o bot para de responder</strong> até ser religado.</li>
           <li>O endereço da API (túnel <code>trycloudflare.com</code>) muda a cada reinício: peça <code>/conectar</code> de novo.</li>
           <li>Sem IA: o entendimento é por palavras-chave do catálogo. Relatos muito diferentes caem em “qual destas opções é mais parecida?”.</li>
-          <li>Os valores são estimativas do catálogo; não há pagamento, nota fiscal nem integração com WhatsApp.</li>
+          <li>Os valores são estimativas do catálogo; não há pagamento, nota fiscal nem integração com WhatsApp. Na loja virtual, o bot só repassa a chave Pix/link que o lojista cadastrou e avisa quando o cliente toca em “Já paguei”.</li>
+          <li>Frete por CEP usa a região pelo 1º dígito (com consulta pública ViaCEP para cidade/UF, quando disponível); não é cotação dos Correios ou transportadora.</li>
           <li>Pós-venda sai 2 minutos após “Entregue” (para facilitar o teste); na versão final, 1 dia depois.</li>
         </ul>
       </section>

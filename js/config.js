@@ -5,8 +5,9 @@
   const S = () => AT.S;
 
   function exemploVars() {
-    const t = S().ticketsSeg().find((x) => x.itens && x.itens.length) || null;
+    const t = S().ticketsSeg().find((x) => x.itens && x.itens.length && (!x.tipo || x.tipo === 'pedido')) || null;
     if (t) return M.vars(t);
+    if (S().seg() === 'ecommerce') return { cliente: 'Júlia', servico: '1x Fone bluetooth TWS', prazo: 'amanhã às 18:00', valor: 'R$ 89,90', negocio: S().negocio().nome, veiculo: 'seu pedido', placa: '', pedido: 'EC-1030', rastreio: 'QB123456789BR' };
     return { cliente: 'Carla', servico: 'troca de óleo', prazo: 'hoje às 17:00', valor: 'R$ 180', negocio: S().negocio().nome, veiculo: 'Onix 2019', placa: 'ABC1D23' };
   }
 
@@ -15,11 +16,11 @@
     const vars = exemploVars();
     main.innerHTML = `
       <div class="cab"><div><div class="olho">Passo 5 · Regras do negócio</div><h1>Configurações</h1>
-      <p>Edite as mensagens automáticas, o SLA por prioridade e os dados da demonstração. Vale para o segmento <strong>${seg === 'oficina' ? 'Oficina' : 'Loja'}</strong>.</p></div></div>
+      <p>Edite as mensagens automáticas, o SLA por prioridade e os dados da demonstração. Vale para o segmento <strong>${U.esc(S().segDef(seg).rotulo)}</strong>.${seg === 'ecommerce' ? ' Frete, pagamento e trocas ficam em <a href="#/onboarding">Cadastro → Políticas da loja</a>.' : ''}</p></div></div>
       <div class="grade">
         <section class="card" aria-labelledby="h-auto">
           <h2 id="h-auto">Automações (cadeia de mensagens)</h2>
-          <p class="pequeno muted">Variáveis disponíveis: <code>{cliente}</code> <code>{servico}</code> <code>{prazo}</code> <code>{valor}</code> <code>{negocio}</code> <code>{veiculo}</code> <code>{placa}</code>. A prévia usa um pedido real da lista.</p>
+          <p class="pequeno muted">Variáveis disponíveis: <code>{cliente}</code> <code>{servico}</code> <code>{prazo}</code> <code>{valor}</code> <code>{negocio}</code> ${seg === 'ecommerce' ? '<code>{pedido}</code> <code>{rastreio}</code>' : '<code>{veiculo}</code> <code>{placa}</code>'}. A prévia usa um pedido real da lista.</p>
           <div id="cf-regras">${regras.map((r, i) => `
             <div class="regra" data-i="${i}">
               <input type="checkbox" class="toggle" id="cf-on-${i}" ${r.ativo ? 'checked' : ''} aria-describedby="cf-q-${i}">
@@ -34,11 +35,11 @@
         </section>
         <section class="card" aria-labelledby="h-sla">
           <h2 id="h-sla">SLA por prioridade</h2>
-          <p class="pequeno muted">Resposta: tempo máximo até a 1ª resposta humana quando o cliente pede atendente. Conclusão: horas úteis (dentro do horário de funcionamento) até o pedido ficar pronto. Vale para novos pedidos.</p>
-          <div class="tabela-wrap"><table><thead><tr><th>Prioridade</th><th>Resposta (min)</th><th>Conclusão (horas úteis)</th></tr></thead><tbody>
+          <p class="pequeno muted">${seg === 'ecommerce' ? 'Resposta: tempo máximo até a 1ª resposta humana (atendente, troca). Envio: o prazo de envio de cada pedido conta em dias úteis a partir do pagamento confirmado e usa a política “Envio após pagamento” do Cadastro (ou o prazo do produto, se for maior).' : 'Resposta: tempo máximo até a 1ª resposta humana quando o cliente pede atendente. Conclusão: horas úteis (dentro do horário de funcionamento) até o pedido ficar pronto. Vale para novos pedidos.'}</p>
+          <div class="tabela-wrap"><table><thead><tr><th>Prioridade</th><th>Resposta (min)</th><th>${seg === 'ecommerce' ? 'Envio (dias úteis)' : 'Conclusão (horas úteis)'}</th></tr></thead><tbody>
             ${Object.keys(P).map((k) => `<tr><th scope="row" style="text-transform:none;font-size:.95rem">${P[k]}</th>
               <td><input class="inp num" type="number" min="1" data-p="${k}" data-k="respostaMin" value="${sla[k].respostaMin}" aria-label="Resposta em minutos, prioridade ${P[k]}" style="width:110px"></td>
-              <td><input class="inp num" type="number" min="1" data-p="${k}" data-k="conclusaoHoras" value="${sla[k].conclusaoHoras}" aria-label="Conclusão em horas úteis, prioridade ${P[k]}" style="width:110px"></td></tr>`).join('')}
+              <td>${seg === 'ecommerce' ? `<a href="#/onboarding">${AT.E.pol().envioDiasUteis || 1} dia(s) útil(eis)</a> <span class="pequeno muted">(política da loja)</span>` : `<input class="inp num" type="number" min="1" data-p="${k}" data-k="conclusaoHoras" value="${sla[k].conclusaoHoras}" aria-label="Conclusão em horas úteis, prioridade ${P[k]}" style="width:110px">`}</td></tr>`).join('')}
           </tbody></table></div>
         </section>
         <section class="card" aria-labelledby="h-canais">

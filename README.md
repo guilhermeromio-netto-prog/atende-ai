@@ -1,8 +1,8 @@
 # Atende AI — CRM com atendimento automático (demonstração)
 
-Protótipo de produto para **oficinas mecânicas e lojas**: o cliente conversa com o bot (canal principal **Telegram**; **WhatsApp em breve**), recebe orçamento automático com itens do catálogo, prazo/SLA e botões para aprovar, e o dono acompanha tudo num painel com pedidos, SLA e dashboard.
+Protótipo de produto para **oficinas mecânicas, lojas e lojas virtuais**: o cliente conversa com o bot (canal principal **Telegram**; **WhatsApp em breve**), recebe orçamento automático com itens do catálogo, prazo/SLA e botões para aprovar, e o dono acompanha tudo num painel com pedidos, SLA e dashboard.
 
-> **Demonstração — IA simulada.** As respostas são geradas por regras e palavras-chave (`dados.json`). Não há integração real com Telegram, WhatsApp ou modelos de IA. Os 25 pedidos iniciais são **dados de exemplo fictícios**, salvos só no navegador (localStorage).
+> **Demonstração — IA simulada.** As respostas são geradas por regras e palavras-chave (`dados.json`). Não há integração real com Telegram, WhatsApp ou modelos de IA. Os 33 pedidos iniciais são **dados de exemplo fictícios**, salvos só no navegador (localStorage).
 
 **Site:** https://guilhermeromio-netto-prog.github.io/atende-ai/
 
@@ -10,7 +10,7 @@ Protótipo de produto para **oficinas mecânicas e lojas**: o cliente conversa c
 
 | Rota | O que mostra |
 |---|---|
-| `#/` | Proposta de valor, troca Oficina/Loja, prévia da conversa no Telegram |
+| `#/` | Proposta de valor, troca Oficina/Loja/Loja virtual, prévia da conversa no Telegram |
 | `#/onboarding` | O dono conversa com o bot de cadastro: "troca de óleo R$ 180 1h" vira linha do catálogo (editável), horário de funcionamento |
 | `#/atendimento` | Visão do cliente final no Telegram: sintoma → perguntas (nome, modelo, placa, urgência) → orçamento itemizado → Aprovar/Falar com atendente → agendamento. Abre o pedido |
 | `#/pedidos` | Kanban/lista (Novo → Orçado → Aprovado → Em serviço → Pronto → Entregue), SLA colorido, gaveta com conversa e cadeia de automações, "Simular avanço" |
@@ -26,6 +26,8 @@ js/util.js              formatação, horas úteis, utilitários
 js/store.js             estado em localStorage, semeado de dados.json
 js/motor.js             orçamento, SLA, automações, parser do cadastro, intenção
 js/conversa.js          motor de conversa do cliente (independente de canal)
+js/ecommerce.js         loja virtual: busca tolerante a erros, frete por CEP, carrinho, políticas, parser do lojista
+js/conversa-ecom.js     conversa do cliente da loja virtual (carrinho → pagamento do lojista → rastreio/troca)
 js/canais/base.js       núcleo de renderização de conversa
 js/canais/telegram.js   adaptador Telegram (principal)
 js/canais/whatsapp.js   adaptador WhatsApp (em breve)
@@ -35,6 +37,10 @@ docs/arquitetura.md     proposta da fase 2 (Telegram Bot API + Grok, depois What
 bot/                    bot REAL de teste no Telegram (Python, só biblioteca padrão) + API de leitura
 COMO-USAR.md            guia para donos e clientes finais
 ```
+
+## Loja virtual (🛒)
+
+Terceiro segmento, no mesmo motor e no mesmo `dados.json` do bot e do site: produtos com preço/estoque/prazo de envio, políticas de frete (grátis acima de, fixo ou tabela por região do CEP), Pix com desconto, parcelas, chave Pix/link do lojista (nunca simula pagamento), troca (CDC 7 dias). Pipeline: Novo → Aguardando pagamento → Pago → Separando → Enviado (rastreio) → Entregue, com trocas/atendimento em coluna própria. KPIs: pedidos, faturamento, ticket médio, conversão carrinho → pago, carrinhos abandonados, envio no prazo, trocas. Passo a passo em [COMO-USAR.md](COMO-USAR.md#-loja-virtual-para-quem-vende-online).
 
 ## Bot de teste no Telegram
 

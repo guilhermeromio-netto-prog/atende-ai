@@ -203,6 +203,10 @@ def _minusc(s: str) -> str:
 
 def vars_ticket(t: dict, tenant: dict) -> dict:
     rot = DADOS["segmentos"][tenant["segmento"]]["rotulos"]
+    if tenant["segmento"] == "ecommerce":
+        return {"cliente": primeiro_nome(t.get("cliente")), "servico": itens_texto(t.get("itens", [])) or "seus itens",
+                "prazo": data_hora(t["prazo"]), "valor": brl_c(t.get("totalFinal", valor_medio(t))), "negocio": tenant["nome"],
+                "veiculo": "seu pedido", "placa": "", "pedido": t["id"], "rastreio": t.get("rastreio") or "não informado"}
     return {
         "cliente": primeiro_nome(t.get("cliente")),
         "servico": " + ".join(_minusc(i["nome"]) for i in t.get("itens", [])) or "o serviço",
@@ -211,12 +215,21 @@ def vars_ticket(t: dict, tenant: dict) -> dict:
         "negocio": tenant["nome"],
         "veiculo": t.get("veiculo") or "seu " + rot["objeto"],
         "placa": t.get("placa") or "",
+        "pedido": t["id"], "rastreio": t.get("rastreio") or "",
     }
 
 
+def status_de(seg: str, tipo: str | None = None) -> list:
+    sd = DADOS["segmentos"].get(seg, {})
+    if tipo in ("troca", "atendimento"):
+        return sd.get("statusTroca", ["Novo", "Em análise", "Resolvido"])
+    return sd.get("status", STATUS)
+
+
 def proximo_status(t: dict) -> str | None:
-    i = STATUS.index(t["status"]) if t["status"] in STATUS else -1
-    return STATUS[i + 1] if 0 <= i < len(STATUS) - 1 else None
+    lista = status_de(t.get("seg", "oficina"), t.get("tipo"))
+    i = lista.index(t["status"]) if t["status"] in lista else -1
+    return lista[i + 1] if 0 <= i < len(lista) - 1 else None
 
 
 def mudar_status(t: dict, tenant: dict, status: str, ts: int | None = None, pular_chat=(), posvenda_atraso_min: int = 1440) -> list[dict]:
@@ -224,9 +237,18 @@ def mudar_status(t: dict, tenant: dict, status: str, ts: int | None = None, pula
     ts = ts or agora_ms()
     t["status"] = status
     t.setdefault("historico", []).append({"status": status, "ts": ts})
-    if status == "Aprovado":
+    sd = DADOS["segmentos"][tenant["segmento"]]
+    if t.get("tipo") in ("troca", "atendimento"):
+        if status == "Resolvido":
+            t["resolvidoEm"] = ts
+        if status != "Novo":  # SLA de troca/atendimento = prazo para a 1ª análise
+            t.setdefault("prontoEm", ts)
+        return []
+    if status == sd.get("statusAprovado", "Aprovado"):
         t["aprovadoEm"] = ts
-    if status == "Pronto":
+        if tenant["segmento"] == "ecommerce":  # SLA de envio começa a contar no pagamento
+            t["prazo"] = soma_dias_uteis(ts, envio_dias(tenant, t), tenant["horario"])
+    if status == sd.get("statusPronto", "Pronto"):
         t["prontoEm"] = ts
     if status == "Entregue":
         t["entregueEm"] = ts
@@ -235,7 +257,7 @@ def mudar_status(t: dict, tenant: dict, status: str, ts: int | None = None, pula
     saem = []
     v = vars_ticket(t, tenant)
     for r in tenant["automacoes"]:
-        if r["gatilho"] != status or not r["ativo"]:
+        if r["gatilho"] != status or not r["ativo"] or r["id"] == "carrinho":
             continue
         texto = template(r["template"], v)
         estado, quando = "enviado", ts
@@ -449,3 +471,294 @@ def parse_dono(texto: str, seg: str) -> dict:
             if s:
                 res["servicos"].append(s)
     return res
+
+
+# ================================================================ Loja virtual (ecommerce)
+def brl_c(v: float) -> str:
+    """R$ com centavos: 89.9 -> R$ 89,90"""
+    v = round(float(v or 0) + 1e-9, 2)
+    inteiro, cent = divmod(round(v * 100), 100)
+    return "R$ " + f"{inteiro:,}".replace(",", ".") + f",{cent:02d}"
+
+
+def itens_texto(itens: list) -> str:
+    return " + ".join(f'{i.get("qtd", 1)}x {i["nome"]}' if "qtd" in i else i["nome"] for i in itens)
+
+
+def politicas_padrao() -> dict:
+    return json.loads(json.dumps(DADOS["segmentos"]["ecommerce"]["politicas"]))
+
+
+def envio_dias(tenant: dict, t: dict | None = None) -> int:
+    pol = tenant.get("politicas") or politicas_padrao()
+    base = int(pol.get("envioDiasUteis", 1) or 1)
+    if t and t.get("itens"):
+        base = max([base] + [int(i.get("envioDias") or 0) for i in t["itens"]])
+    return base
+
+
+def soma_dias_uteis(ms: int, n: int, horario: list) -> int:
+    """Fim do expediente do n-ésimo dia útil depois de ms (dias com horário de funcionamento)."""
+    d = dt(ms)
+    contados, guarda = 0, 0
+    while guarda < 60:
+        guarda += 1
+        d = (d + timedelta(days=1)).replace(hour=12, minute=0, second=0, microsecond=0)
+        h = horario[_dia_semana(d)] if horario else ["18:00", "18:00"]
+        if h:
+            contados += 1
+            if contados >= max(1, n):
+                fe = to_min(h[1])
+                return int(d.replace(hour=fe // 60, minute=fe % 60).timestamp() * 1000)
+    return ms + n * 86400000
+
+
+REGIAO_UF = {"SP": "SP", "RJ": "Sudeste", "MG": "Sudeste", "ES": "Sudeste"}
+
+
+def regiao_cep(cep: str, uf: str | None = None) -> str:
+    if uf:
+        return REGIAO_UF.get(uf.upper(), "Outros")
+    c = re.sub(r"\D", "", cep or "")
+    if not c:
+        return "Outros"
+    return "SP" if c[0] in "01" else ("Sudeste" if c[0] in "23" else "Outros")
+
+
+def achar_cep(texto: str):
+    m = re.search(r"\b(\d{5})-?(\d{3})\b", texto or "")
+    return m.group(1) + "-" + m.group(2) if m else None
+
+
+def viacep(cep: str):
+    """Consulta pública opcional (cidade/UF). Falha silenciosa: cai na regra do 1º dígito."""
+    if os.environ.get("ATENDE_SEM_REDE"):
+        return None
+    try:
+        import urllib.request
+        with urllib.request.urlopen(f"https://viacep.com.br/ws/{re.sub(r'[^0-9]', '', cep)}/json/", timeout=4) as r:
+            d = json.loads(r.read().decode())
+        return None if d.get("erro") else {"cidade": d.get("localidade"), "uf": d.get("uf")}
+    except Exception:
+        return None
+
+
+def calc_frete(pol: dict, subtotal: float, regiao: str) -> dict:
+    f = pol.get("frete", {})
+    dias = int((f.get("prazosDias") or {}).get(regiao, 5) or 5)
+    if f.get("gratisAcima") is not None and f.get("gratisAcima") != "" and subtotal >= float(f["gratisAcima"]):
+        return {"valor": 0.0, "dias": dias, "gratis": True}
+    if f.get("tipo") == "fixo":
+        return {"valor": float(f.get("fixo") or 0), "dias": dias, "gratis": False}
+    v = (f.get("regioes") or {}).get(regiao)
+    if v is None:
+        v = f.get("fixo") or 0
+    return {"valor": float(v), "dias": dias, "gratis": False}
+
+
+def texto_politicas(pol: dict) -> str:
+    f, pg = pol.get("frete", {}), pol.get("pagamento", {})
+    ls = []
+    if f.get("tipo") == "fixo":
+        ls.append(f"🚚 Frete fixo {brl_c(f.get('fixo') or 0)}")
+    else:
+        reg = f.get("regioes") or {}
+        pz = f.get("prazosDias") or {}
+        ls.append("🚚 Frete por região: " + "; ".join(f"{k} {brl_c(v)} ({pz.get(k, '?')} dias)" for k, v in reg.items()))
+    if f.get("gratisAcima") not in (None, ""):
+        ls.append(f"🎁 Frete grátis acima de {brl_c(f['gratisAcima'])}" if float(f["gratisAcima"]) > 0 else "🎁 Frete grátis para todo o Brasil")
+    ls.append(f"📦 Envio em até {pol.get('envioDiasUteis', 1)} dia(s) útil(eis) após o pagamento")
+    pag = []
+    if pg.get("pixDescontoPct"):
+        pag.append(f"Pix com {pg['pixDescontoPct']}% de desconto")
+    else:
+        pag.append("Pix")
+    if pg.get("parcelas"):
+        pag.append(f"cartão em até {pg['parcelas']}x")
+    ls.append("💳 " + ", ".join(pag))
+    ls.append("🔁 " + (pol.get("troca") or ""))
+    return "\n".join(ls)
+
+
+STOP = set("vcs voces voce vc tem tens tenho quero queria comprar compra um uma uns umas o a os as de do da dos das pra para por preco "
+           "quanto custa custam valor estoque disponivel ai e me ver mostrar produto produtos algum alguma qual quais com sem no na em "
+           "isso esse essa este esta sim nao ola oi bom dia boa tarde noite gostaria saber vende vendem tem? ola, por favor".split())
+NUMS = {"um": 1, "uma": 1, "dois": 2, "duas": 2, "tres": 3, "quatro": 4, "cinco": 5, "seis": 6, "dez": 10}
+
+
+def lev(a: str, b: str) -> int:
+    if abs(len(a) - len(b)) > 2:
+        return 3
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        cur = [i]
+        for j, cb in enumerate(b, 1):
+            cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb)))
+        prev = cur
+    return prev[-1]
+
+
+def _sing(w: str) -> str:
+    return w[:-1] if len(w) > 4 and w.endswith("s") else w
+
+
+def buscar_produtos(catalogo: list, texto: str) -> list:
+    n = norm(texto)
+    toks = [_sing(w) for w in re.findall(r"[a-z0-9\-]+", n) if w not in STOP and not w.isdigit() and len(w) >= 3]
+    res = []
+    for c in catalogo:
+        termos = set()
+        for p in [c["nome"]] + list(c.get("palavras", [])):
+            termos.update(_sing(w) for w in re.findall(r"[a-z0-9\-]+", norm(p)) if len(w) >= 3 and w not in STOP)
+        sc = 0
+        for p in c.get("palavras", []):
+            if " " in p and norm(p) in n:
+                sc += 3
+        for q in toks:
+            best = 0
+            for w in termos:
+                if q == w:
+                    best = 3; break
+                if len(q) >= 4 and len(w) >= 4 and (w.startswith(q) or q.startswith(w)):
+                    best = max(best, 2)
+                elif len(q) >= 4 and len(w) >= 4 and lev(q, w) <= (2 if len(q) >= 7 else 1):
+                    best = max(best, 2)
+            sc += best
+        if sc >= 2:
+            res.append((c, sc))
+    res.sort(key=lambda x: (-x[1], x[0]["estoque"] <= 0))
+    if res:
+        topo = res[0][1]
+        res = [r for r in res if r[1] >= max(2, topo * 0.6)]
+    return res
+
+
+def achar_qtd(texto: str):
+    n = norm(texto)
+    m = re.search(r"\b(\d{1,2})\s*(?:x|un|unid|unidades|pecas)?\b(?!\s*(?:dias|%|reais|mil))", n)
+    if m and not achar_cep(texto) and int(m.group(1)) > 0:
+        return int(m.group(1))
+    for k, v in NUMS.items():
+        if re.search(r"\b" + k + r"\b", n):
+            return v
+    return None
+
+
+def resumo_carrinho(catalogo: list, carrinho: dict, pol: dict, regiao: str | None, pagamento: str | None) -> dict:
+    itens = []
+    for pid, q in carrinho.items():
+        c = next((x for x in catalogo if x["id"] == pid), None)
+        if c and q > 0:
+            itens.append({"id": pid, "nome": c["nome"], "qtd": q, "preco": float(c["preco"]), "envioDias": c.get("envioDias", 1),
+                          "pecasMin": float(c["preco"]) * q, "pecasMax": float(c["preco"]) * q, "maoMin": 0, "maoMax": 0, "duracao": 0})
+    sub = round(sum(i["preco"] * i["qtd"] for i in itens), 2)
+    fr = calc_frete(pol, sub, regiao) if regiao else None
+    desc = round(sub * float(pol.get("pagamento", {}).get("pixDescontoPct") or 0) / 100, 2) if pagamento == "pix" else 0.0
+    total = round(sub + (fr["valor"] if fr else 0) - desc, 2)
+    return {"itens": itens, "subtotal": sub, "frete": fr, "desconto": desc, "total": total}
+
+
+def parse_produto(chunk: str):
+    resto = " " + chunk + " "
+    out = {"estoque": None, "envioDias": None}
+    e = re.search(r"(?:estoque|qtd|quantidade)\s*:?\s*(\d+)|(\d+)\s*(?:unidades|unid|un|pe[çc]as|em estoque)\b", resto, re.I)
+    if e:
+        out["estoque"] = int(e.group(1) or e.group(2)); resto = resto.replace(e.group(0), " ", 1)
+    v = re.search(r"(?:entrega|envio|prazo|despacho|postagem|envia)\s*(?:em|de)?\s*(\d+)\s*(?:dias?|d)\b(?:\s*[uú]teis)?", resto, re.I)
+    if v:
+        out["envioDias"] = int(v.group(1)); resto = resto.replace(v.group(0), " ", 1)
+    g = re.search(r"r\$\s*" + NUM, resto, re.I) or re.search(r"\b" + NUM + r"\s*reais", resto, re.I) or re.search(r"\b" + NUM + r"\b", resto)
+    if not g:
+        return None
+    preco = _preco(g.group(1))
+    if not preco or preco < 1:
+        return None
+    resto = resto.replace(g.group(0), " ", 1)
+    nome = re.sub(r"r\$|\breais\b|\b(custa|por|valor|pre[çc]o|vendo|tenho|cada)\b", " ", resto, flags=re.I)
+    nome = re.sub(r"[:=|•·()]", " ", nome)
+    nome = re.sub(r"\s+", " ", nome).strip(" ,.;-")
+    nome = re.sub(r"\s+(de|por|a|e|com|em)$", "", nome, flags=re.I)
+    if len(nome) < 3:
+        return None
+    out.update({"nome": cap(nome), "preco": round(preco, 2), "palavras": [w for w in norm(nome).split(" ") if len(w) >= 4]})
+    return out
+
+
+REG_NOMES = r"(sp|sao paulo|capital|sudeste|outros|outras regioes|demais regioes|demais|resto do brasil|brasil)"
+
+
+def _reg(nome: str) -> str:
+    return "SP" if nome in ("sp", "sao paulo", "capital") else ("Sudeste" if nome == "sudeste" else "Outros")
+
+
+def parse_ecom(texto: str) -> dict:
+    """Produtos e políticas da loja virtual a partir do texto do dono."""
+    res = {"nome": None, "produtos": [], "politicas": [], "mudancas": {}}
+    nm = re.search(r"(?:se chama|chama-se|nome (?:da loja |do negócio |da empresa )?(?:é|e)|^\s*nome\s*:)\s*[\"“']?([^\"”'\n;.!]+)", texto, re.I)
+    if nm:
+        res["nome"] = re.sub(r"\s+", " ", nm.group(1).strip())
+    ch = {}
+    for b in [x.strip() for x in re.split(r"\n|;|\.\s+(?=\S)", texto) if x.strip()]:
+        n = norm(b)
+        if nm and nm.group(0).strip()[:12] in b:
+            continue
+        regs = re.findall(r"(?:frete\s+)?(?:para |pra )?" + REG_NOMES + r"\s*:?\s*(?:r\$\s*)?" + NUM + r"(?:\s*(?:reais)?\s*(?:em\s*)?(\d+)\s*dias?)?", n)
+        if "frete" in n or (regs and "estoque" not in n):
+            f = ch.setdefault("frete", {})
+            g = re.search(r"frete gratis (?:acima|a partir) de (?:r\$\s*)?" + NUM, n)
+            if g:
+                f["gratisAcima"] = _preco(g.group(1)); res["politicas"].append(f"🎁 Frete grátis acima de {brl_c(f['gratisAcima'])}")
+            elif re.search(r"frete gratis", n) and not regs:
+                f["gratisAcima"] = 0; res["politicas"].append("🎁 Frete grátis para todo o Brasil")
+            fx = re.search(r"frete (?:fixo|unico)\s*(?:de)?\s*(?:r\$\s*)?" + NUM, n)
+            if fx:
+                f["tipo"] = "fixo"; f["fixo"] = _preco(fx.group(1)); res["politicas"].append(f"🚚 Frete fixo {brl_c(f['fixo'])}")
+            if regs:
+                f["tipo"] = "regiao"
+                for nome_r, val, dias in regs:
+                    r = _reg(nome_r)
+                    f.setdefault("regioes", {})[r] = _preco(val)
+                    if dias:
+                        f.setdefault("prazosDias", {})[r] = int(dias)
+                    res["politicas"].append(f"🚚 Frete {r}: {brl_c(_preco(val))}" + (f" · {dias} dias" if dias else ""))
+            continue
+        if re.search(r"\bpix\b|cartao|parcel|chave|link de pagamento|boleto", n):
+            pg = ch.setdefault("pagamento", {})
+            d = re.search(r"pix\D{0,25}?(\d{1,2})\s*%", n) or re.search(r"(\d{1,2})\s*%\D{0,25}pix", n)
+            if d:
+                pg["pixDescontoPct"] = int(d.group(1)); res["politicas"].append(f"💸 Pix com {pg['pixDescontoPct']}% de desconto")
+            pc = re.search(r"(\d{1,2})\s*x\b", n) or re.search(r"ate (\d{1,2}) vezes", n)
+            if pc:
+                pg["parcelas"] = int(pc.group(1)); res["politicas"].append(f"💳 Cartão em até {pg['parcelas']}x")
+            ck = re.search(r"chave(?:\s+pix)?\s*(?:é|e|:|=)?\s*(.+)$", b, re.I)
+            if ck and len(ck.group(1).strip()) >= 5:
+                pg["pixChave"] = ck.group(1).strip()[:120]; res["politicas"].append("🔑 Chave Pix cadastrada")
+            lk = re.search(r"(https?://\S+)", b)
+            if lk and not ck:
+                pg["linkCartao"] = lk.group(1)[:200]; res["politicas"].append("🔗 Link de pagamento cadastrado")
+            continue
+        if re.search(r"\btroca|devolu|arrependimento", n) and not re.search(r"r\$", n):
+            ch["troca"] = cap(b.strip())[:400]; res["politicas"].append("🔁 Política de troca atualizada")
+            continue
+        ev = re.search(r"(?:envio|despacho|postagem|enviamos|postamos|despachamos)\D{0,15}(\d+)\s*dias?", n)
+        if ev and not re.search(r"r\$|estoque", n):
+            ch["envioDiasUteis"] = int(ev.group(1)); res["politicas"].append(f"📦 Envio em até {ch['envioDiasUteis']} dia(s) útil(eis)")
+            continue
+        p = parse_produto(b)
+        if p:
+            res["produtos"].append(p)
+    res["mudancas"] = ch
+    return res
+
+
+def aplicar_politicas(pol: dict, ch: dict) -> None:
+    for k, v in ch.items():
+        if isinstance(v, dict):
+            alvo = pol.setdefault(k, {})
+            for kk, vv in v.items():
+                if isinstance(vv, dict):
+                    alvo.setdefault(kk, {}).update(vv)
+                else:
+                    alvo[kk] = vv
+        else:
+            pol[k] = v

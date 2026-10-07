@@ -11,6 +11,7 @@
   const BT_NOVA = { rotulo: '🔁 Nova conversa', valor: 'nova' };
 
   C.iniciar = function (seg) {
+    if (seg === 'ecommerce') return AT.ConversaEcom.iniciar();
     const neg = S().negocio(seg), def = S().segDef(seg), ts = Date.now();
     const conv = { etapa: 'problema', campo: null, dados: {}, intent: null, confianca: 0, ticketId: null, chat: [], opcoes: def.exemplos.slice(), canal: S().st.canal || 'telegram' };
     conv.chat.push({ de: 'bot', ts, texto: 'Olá! 👋 Aqui é o atendimento automático da ' + neg.nome + '. ' + (seg === 'oficina' ? 'Me conte o que está acontecendo com o seu carro, do seu jeito.' : 'Me conte o que você precisa, do seu jeito.') });
@@ -18,12 +19,12 @@
     return conv;
   };
   C.estado = (seg) => S().st.conversas[seg] || C.iniciar(seg);
-  C.ticket = (conv) => (conv.ticketId ? S().ticket(conv.ticketId) : null);
-  C.msgs = (conv) => (C.ticket(conv) || conv).chat;
+  C.ticket = (conv) => (conv.seg === 'ecommerce' ? AT.ConversaEcom.pedido(conv) : conv.ticketId ? S().ticket(conv.ticketId) : null);
+  C.msgs = (conv) => (conv.seg === 'ecommerce' ? AT.ConversaEcom.msgs(conv) : (C.ticket(conv) || conv).chat);
 
   C.receber = function (seg, texto) {
     const conv = C.estado(seg);
-    C.msgs(conv).push({ de: 'cliente', texto, ts: Date.now() });
+    (conv.seg === 'ecommerce' ? conv.chat : C.msgs(conv)).push({ de: 'cliente', texto, ts: Date.now() });
     conv.opcoes = []; conv.ultimaEntrada = Date.now();
     S().salvar();
   };
@@ -101,6 +102,7 @@
   }
 
   C.processar = function (seg, texto, valor) {
+    if (seg === 'ecommerce') return AT.ConversaEcom.processar(texto, valor);
     let conv = C.estado(seg);
     if (valor === 'nova') { C.iniciar(seg); return; }
     const out = (txt, extra) => C.msgs(conv).push(Object.assign({ de: 'bot', texto: txt, ts: Date.now() }, extra || {}));

@@ -48,12 +48,43 @@ Existe um **bot real de teste** no Telegram: **[@Applojas10_bot](https://t.me/Ap
 
 A API é **somente leitura** e exige a chave do negócio. Os pedidos reais não podem ser avançados pelo painel web; o avanço é pelos botões no Telegram.
 
+## 🛒 Loja virtual (para quem vende online)
+
+O bot mostra produtos, preço e estoque (entende erro de digitação), calcula frete pelo CEP, fecha o pedido com resumo itemizado (frete, desconto no Pix e total) e manda **as suas** instruções de pagamento. **O bot nunca cobra nem confirma pagamento sozinho:** o cliente toca em “💸 Já paguei”, você recebe o aviso, confere no banco e confirma.
+
+- **Criar a sua loja:** https://t.me/Applojas10_bot?start=dono
+- **Ver a loja de exemplo funcionando** (produtos fictícios, não pague nada): https://t.me/Applojas10_bot?start=loja-exemplo-online
+
+### 1. Criar a loja
+1. Abra https://t.me/Applojas10_bot?start=dono e toque em **➕ Criar meu negócio do zero**.
+2. Escreva o nome da loja (ex.: `Loja do Mano`).
+3. Escolha **🛒 Loja virtual (catálogo de exemplo)** (10 produtos fictícios para testar) ou **🛒 Loja virtual (catálogo vazio)**.
+
+### 2. Cadastrar produtos e políticas conversando (uma coisa por mensagem)
+- Produto: `Fone bluetooth R$ 89 estoque 12 entrega 3 dias` (mandar o mesmo nome de novo atualiza preço/estoque)
+- Frete grátis: `Frete grátis acima de R$ 199` · frete fixo: `Frete fixo R$ 19,90`
+- Frete por região do CEP: `Frete SP R$ 15 2 dias, Sudeste R$ 22 4 dias, outros R$ 35 8 dias`
+- Prazo de envio: `Envio em 1 dia útil`
+- Pagamento: `Pix com 5% de desconto, cartão em até 6x`
+- Chave Pix (texto que o cliente vê): `Chave pix: sua-chave-aqui` · link do cartão: `Link do cartão: https://...`
+- Troca: `Troca em até 7 dias por arrependimento` (padrão já vem com o texto do CDC, art. 49)
+- Conferir: `/catalogo` e `/politicas` · remover: `/remover N`
+
+### 3. Divulgar e testar
+1. `/link` → coloque o link na bio do Instagram, no site ou no WhatsApp.
+2. Teste com `/cliente`: “tem fone bluetooth?” → adicionar ao carrinho → **Fechar pedido** → nome, CEP, endereço, Pix ou cartão → **Confirmar**. Volte com `/dono`.
+3. Cada pedido chega com botões: **✅ Confirmar pagamento** (depois de conferir no banco; o estoque baixa sozinho) → **▶ Separando** → **📦 Informar rastreio e enviar** (você digita o código, ou `sem`) → **Entregue** (sai o pós-venda com avaliação).
+4. O cliente pode perguntar “cadê meu pedido EC-3005?” (recebe status e rastreio), “quanto é o frete pro CEP 30140-071?” ou “quero trocar” (abre solicitação com motivo e a sua política).
+5. Carrinho esquecido recebe lembrete automático uma vez (modo teste: 10 minutos).
+6. `/painel` mostra pedidos, faturamento, ticket médio, conversão carrinho → pago, carrinhos abandonados, envio no prazo e trocas. `/conectar` abre o mesmo painel no navegador.
+
 ## Limitações do modo de teste
 
 - O bot e a API rodam num computador de teste. **Se ele desligar ou reiniciar, o bot para** até ser religado.
 - O endereço do túnel (`*.trycloudflare.com`) muda a cada reinício: peça `/conectar` de novo.
 - Sem IA: entendimento por palavras-chave. Relatos muito diferentes caem em “qual destas opções é mais parecida?”.
-- Valores são estimativas do catálogo. Sem pagamento, nota fiscal ou WhatsApp.
+- Valores são estimativas do catálogo. Sem pagamento, nota fiscal ou WhatsApp. Na loja virtual o bot só repassa a chave Pix/link cadastrados pelo lojista; a confirmação é sempre manual.
+- Frete por CEP: região pelo 1º dígito do CEP (com consulta pública ViaCEP para cidade/UF quando disponível). Não é cotação de Correios ou transportadora.
 - Pós-venda sai 2 minutos após “Entregue” (para facilitar o teste); na versão final, 1 dia depois.
 
 ## Caminho para a fase 2
@@ -71,6 +102,7 @@ Detalhes em [docs/arquitetura.md](docs/arquitetura.md).
 cd bot && setsid nohup ./run.sh >/dev/null 2>&1 &      # bot com reinício automático → data/bot.log
 setsid nohup ./tunnel.sh >/dev/null 2>&1 &             # túnel cloudflared → data/tunnel_url.txt
 python3 test_bot.py                                    # testes com updates simulados (sem rede)
+# ATENDE_ABANDONO_MIN=10 (lembrete de carrinho) · ATENDE_POSVENDA_MIN=2 · ATENDE_SEM_REDE=1 desliga o ViaCEP
 ```
 
 Parar: `kill $(cat bot/data/run.pid) $(cat bot/data/bot.pid)` e `kill $(cat bot/data/tunnel.pid); pkill -f "cloudflared tunnel"`.
